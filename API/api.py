@@ -1,0 +1,104 @@
+import API.reports as r
+import uuid
+from API.njson import dc, lc, checkuuid, b64e, jc, loads
+import API.cache as cache
+
+def keygen():
+    import uuid
+    return uuid.uuid4()
+
+def merge_dicts(*args):
+    result = {}
+    for dictionary in args:
+        result.update(dictionary)
+    return result
+
+def _master(f):
+    def d(self):
+        if self.apikey == '8725c240-f1bc-41df-87c5-b9738b3cc75a':
+            return f(self)
+        return {}
+    return d
+
+class API:
+
+    def _response(self, id, message, method):
+        if self.option == 'raw' or self.option2 == 'raw':
+            self.option2 = ''
+            return message
+        try:
+            return {'status':message.pop('status', True),'id':id,'message':message, 'method':method}
+        except (TypeError, AttributeError): #handle when message is list
+            return {'status': False if isinstance(message, (str)) else True, 'id': id, 'message': message, 'method': method}
+
+    def __init__(self, payload, apikey, environ, mode):
+        self.r = r.Report
+        self.mode = mode
+        self.apikey = apikey
+        self.environ = environ
+        self.pl = payload
+        self.option = self.pl.pop('option', '').lower()
+        self.option2 = self.pl.pop('option2', '').lower()
+         #make dynamic query into database at some point for future gateways.
+        try:
+            self.request_details = {k: v for k, v in dict(self.environ).items() if isinstance(v, (str, int, list, dict, tuple))}
+        except:
+            self.request_details = {'mode':'Internal'}
+        self.pl['ip'] = self.request_details.get('REMOTE_ADDR') or '127.0.0.1'
+
+    # def login(self):
+    #     if self.apikey:
+    #         self.pl.update({'apikey':self.apikey})
+    #     return User().login(self.pl)
+    #
+    # def logout(self):
+    #     return User().logout()
+
+    def _sesh(self):
+        return dict(self.u._session())
+
+    def session(self):
+        expires = self.pl.get('expires',5)
+        return {'session':self.c.session_create(expires)}
+
+    def users(self):
+        if self.option == 'new':
+            return {'users':['blah']}
+
+    def log(self):
+        if self.option == 'flush':
+            return cache.flush_log()
+        return cache.retrieve_log(limit=self.pl.get('limit', 20))
+
+    def report(self):
+        name = self.pl['name']
+        report = self.r(name)
+        if 'meta' in self.pl:
+            return report.update(self.pl['meta'])
+        return report.meta or {}
+
+    def hello(self):
+        if self.option =='test':
+            return 'TEST'
+        if self.mode == 'post':
+            return {'hello':'world'}
+        if self.mode =='get':
+            return 'hello'
+
+    def azuser(self):
+        import API.toolkits.azure as a
+        if self.option == 'delete':
+            return a.AzureSDB().delete_user(self.pl['email'])
+
+    def paylocity(self):
+        from API.paylocity import Paylocity
+        p = Paylocity()
+        if self.option=='employees':
+            return p.employees()
+        if self.option=='aztopay':
+            p.az_pay()
+            return [[u[8], u[6], 'U', u[2]] for u in cache.retrieve('aztopay') if u[2]]
+
+    def removed_ad_users(self):
+        return cache.removed_ad_user('get')
+

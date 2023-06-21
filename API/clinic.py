@@ -1,0 +1,1 @@
+#clinic table - id, name, address, phone, users {}

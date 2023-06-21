@@ -1,0 +1,1 @@
+% rebase('templates/render/bootstrap.tpl', title=title, page='app', title='SDB APP')

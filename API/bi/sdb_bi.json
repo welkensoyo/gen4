@@ -1,0 +1,19 @@
+{
+    "name" : "Data Team PBI Theme",
+    "dataColors" : {"#001e52","#305595", "#b7bfc4", "#ff773a"},
+    "visualStyles": {
+        "page": {
+          "*": {
+            "background": [{
+              "image": {
+                "name": "sdb",
+                "scaling": "Fit",
+                "url" : "C:\\Users\\JacksonShacklett\\OneDrive - Specialty Dental Brands\\Data Team\\2023\\BI Files\\IT Backgrounds-01.jpg"
+              },
+              "transparency": 50
+              }
+            ]
+          }
+        }
+    }
+}
