@@ -158,7 +158,7 @@ class API:
                                 cw.writerow(l)
         except:
             sleep(10)
-            self.load_tmp_file()
+            self.load_tmp_file(table, start)
         if reload:
             self.drop_table()
         self.create_table(self.table)
@@ -207,29 +207,46 @@ class API:
                     txt += f'{col} DATETIME2,'
                 else:
                     txt += f'{col} varchar(255),'
-            txt = txt[:-1]+');'
+            txt = txt[:-1]+f''');'''
             db.execute(txt)
+            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON dbo.vx_{tablename}  (practice_id, id); ''')
         except:
             print(x)
             traceback.print_exc()
         return self
 
-
-if __name__=='__main__':
+def reset():
     import time
-    os.chdir('../../')
-    #bcp gen4_dw.dbo.vx_patients in "dbo.vx_patients.csv" -S gen4-sql01.database.windows.net -U Dylan -P 8DqGUa536RC7 -h TABLOCK -q -c -t ","
     start = time.perf_counter()
     # v.table = 'appointments'
     # v.load_tmp_file()
     # v.load_bcp_db()
     tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
-
     for t in tables:
         v = API()
         v.load_tmp_file(t, reload=True)
-
     print(f'IT TOOK: {time.perf_counter() - start}')
+    return
+
+def scheduled(interval):
+    import time
+    start = time.perf_counter()
+    # v.table = 'appointments'
+    # v.load_tmp_file()
+    # v.load_bcp_db()
+    x = arrow.now().shift(hours=-interval).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+    tables = (
+    'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+    'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
+    for t in tables:
+        v = API()
+        v.load_tmp_file(t, start=x)
+    print(f'IT TOOK: {time.perf_counter() - start}')
+    return
+
+if __name__=='__main__':
+    os.chdir('../../')
+    reset()
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = 'dbo.vx_ledger.csv'

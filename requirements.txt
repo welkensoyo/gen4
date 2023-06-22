@@ -32,3 +32,4 @@ pygeocoder
 google-cloud-bigquery
 pandas-gbq
 matplotlib
+ndjson

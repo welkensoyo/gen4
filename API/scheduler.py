@@ -1,7 +1,7 @@
 import logging
 import schedule
 from gevent import sleep as gsleep, spawn as gspawn
-from API.scheduling import everyday, saturday, sunday, weekdays
+from API.scheduling import everyday, saturday, sunday, weekdays, everyhour
 from API.config import scheduler as check
 
 logger = logging.getLogger('')
@@ -14,6 +14,7 @@ def start():
         weekdays.set()
         saturday.set()
         sunday.set()
+        everyhour.set()
         while 1:
             try:
                 schedule.run_pending()
