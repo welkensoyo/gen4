@@ -12,7 +12,6 @@ from geventwebsocket.handler import WebSocketHandler
 from beaker.middleware import SessionMiddleware
 from mainapp import mainappRoute
 from whitenoise import WhiteNoise, compress
-from API import cache
 
 debug = False
 staticfolder = 'static'
@@ -50,8 +49,6 @@ if __name__ == '__main__':
     if config.compress:
         spawn(check_compress)
     print('Started...')
-    if config.scheduler:
-        cache.log('SERVER', f'{config.host} STARTED')
     botapp = bottle.app()
     for Route in (mainappRoute,):
         botapp.merge(Route)
@@ -64,8 +61,6 @@ if __name__ == '__main__':
 
     def shutdown():
         print('Shutting down ...')
-        if config.scheduler:
-            cache.log('SERVER', f'{config.host} SHUTDOWN')
         server.stop(timeout=5)
         exit(signal.SIGTERM)
 
