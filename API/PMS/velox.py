@@ -17,7 +17,6 @@ CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
 pids = [1438, 1404, 1446, 1429, 1442, 1489, 1425, 1405, 1413, 1402, 1450, 1464, 1401, 1444, 1408, 1398, 1485, 1403, 1458, 1455, 1382, 1406, 1381, 1439, 1441, 1440, 1498, 1448, 1407, 1414, 1410, 1396, 1486, 1449, 1443, 1409, 1068, 1431, 1426, 1397, 1380, 1453, 1435, 1447, 1434, 1411, 1436, 1379, 1400, 1432, 1399, 1020, 1430, 1433, 1412, 1454, 1589, 1588, 1606, 1605]
-# pids = [1589, 1588]
 pids.sort()
 
 class API:
@@ -223,8 +222,9 @@ def reset():
     # v.load_tmp_file()
     # v.load_bcp_db()
     tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
-    tables = ('treatments',)
+    # tables = ('ledger', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
     for t in tables:
+        print(t)
         v = API()
         v.load_tmp_file(t, reload=True)
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -233,13 +233,11 @@ def reset():
 def scheduled(interval):
     import time
     start = time.perf_counter()
-    # v.table = 'appointments'
-    # v.load_tmp_file()
-    # v.load_bcp_db()
     x = arrow.now().shift(hours=-interval).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
     tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
     'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
     for t in tables:
+        print(t)
         v = API()
         v.load_tmp_file(t, start=x)
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -248,7 +246,7 @@ def scheduled(interval):
 if __name__=='__main__':
     os.chdir('../../')
     # scheduled(10)
-    reset()
+    # reset()
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = 'dbo.vx_ledger.csv'
