@@ -12,6 +12,7 @@ from geventwebsocket.handler import WebSocketHandler
 from beaker.middleware import SessionMiddleware
 from mainapp import mainappRoute
 from whitenoise import WhiteNoise, compress
+from pathlib import Path
 
 debug = False
 staticfolder = 'static'
@@ -48,6 +49,7 @@ def check_compress():
 if __name__ == '__main__':
     if config.compress:
         spawn(check_compress)
+    print(Path.home())
     print('Started...')
     botapp = bottle.app()
     for Route in (mainappRoute,):

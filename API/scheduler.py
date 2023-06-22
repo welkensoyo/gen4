@@ -10,11 +10,11 @@ def start():
     if not check:
         return
     def start_thread():
+        everyhour.set()
         everyday.set()
         weekdays.set()
         saturday.set()
         sunday.set()
-        everyhour.set()
         while 1:
             try:
                 schedule.run_pending()
