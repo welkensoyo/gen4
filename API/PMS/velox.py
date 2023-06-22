@@ -161,7 +161,7 @@ class API:
             self.load_tmp_file(table, start)
         if reload:
             self.drop_table()
-        self.create_table(self.table)
+            self.create_table(self.table)
         self.load_bcp_db()
 
     def load_bcp_db(self, table= ''):
@@ -209,7 +209,7 @@ class API:
                     txt += f'{col} varchar(255),'
             txt = txt[:-1]+f''');'''
             db.execute(txt)
-            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON dbo.vx_{tablename}  (practice_id, id); ''')
+            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON dbo.vx_{tablename}  (practice_id, id) with ignore_dup_key; ''')
         except:
             print(x)
             traceback.print_exc()
@@ -246,7 +246,7 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    reset()
+    scheduled(1)
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = 'dbo.vx_ledger.csv'
