@@ -136,6 +136,7 @@ class API:
                 return val
             return val
         try:
+            self.create_folder()
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f, delimiter='|')
                 for pid in pids:
@@ -157,6 +158,7 @@ class API:
                                 l.insert(1, pid)
                                 cw.writerow(l)
         except:
+            traceback.print_exc()
             sleep(10)
             self.load_tmp_file(table, start)
         if reload:
@@ -174,6 +176,12 @@ class API:
         print(bcp)
         os.system(bcp)
         return self
+
+    def create_folder(self):
+        p = str(Path.home()) + '/dataload'
+        isExist = os.path.exists(p)
+        if not isExist:
+            os.makedirs(p)
 
     def drop_table(self):
         PSQL = f''' DROP TABLE dbo.vx_{self.table}; '''
@@ -245,7 +253,7 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    # scheduled(10)
+    scheduled(10)
     # reset()
     #45052.6 rows per sec.
     # v.create_split_files()
