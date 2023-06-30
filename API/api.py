@@ -2,6 +2,8 @@ import API.reports as r
 import uuid
 from API.njson import dc, lc, checkuuid, b64e, jc, loads
 import API.cache as cache
+from API.clinic import API as Practice
+from API.PMS.birdeye import API as Birdeye
 
 def keygen():
     import uuid
@@ -101,4 +103,25 @@ class API:
 
     def removed_ad_users(self):
         return cache.removed_ad_user('get')
+
+    def practices(self):
+        p = Practice()
+        if self.mode == 'post':
+            return p.upsert(self.pl['table'])
+        return p.get()
+
+    def birdeye(self):
+        b = Birdeye()
+        methods = {
+            'search_business': b.search_business,
+            'business_review': b.business_review,
+            'employees': b.employees,
+            'survey': b.survey,
+            'conversations': b.employees,
+            'reviews': b.reviews,
+            'competitor': b.competitor,
+            'search_child_business': b.search_child_business,
+            'user': b.user
+        }
+        return methods[self.option](self.pl)
 
