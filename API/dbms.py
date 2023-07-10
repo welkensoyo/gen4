@@ -28,7 +28,9 @@ def close():
 class ConnectionError(Exception):
     pass
 
-
+def getconn():
+    SQLcursor(sqlserver)
+    return _conn
 def fetchone(PSQL, *args): return SQLcursor(sqlserver).fetchone(PSQL, *args)
 def fetchall(PSQL, *args): return SQLcursor(sqlserver).fetchall(PSQL, *args)
 def execute(PSQL, *args): return SQLcursor(sqlserver).execute(PSQL, *args)

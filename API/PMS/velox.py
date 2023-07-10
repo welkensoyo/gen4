@@ -125,8 +125,6 @@ class API:
     def load_tmp_file(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         self.table = table
         self.filename = f'dbo.vx_{self.table}.csv'
-        ids_to_delete = []
-        ia = ids_to_delete.append
         def cleanup(val):
             val = str(val)
             if val == 'None':
@@ -137,39 +135,45 @@ class API:
             except:
                 return val
             return val
-        try:
-            self.create_folder()
-            with open(self.root+self.filename, 'w') as f:
-                cw = csv.writer(f, delimiter='|')
-                for pid in pids:
-                    # print(pid)
-                    meta = {
-                        "practice": {
-                            "id": pid,
-                            "fetch_modified_since": start
-                        },
-                        "version": 1,
-                        "data_to_fetch": {
-                            f"{self.table}": {"records_per_entity": 5000}
-                        }}
-                    for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
-                        x = ndjson.loads(s)
-                        for p in x:
-                            for i in p.get('data', []):
-                                l = list(i.values())
-                                ia(l[0])
-                                l = [cleanup(_) for _ in l]
-                                l.insert(1, pid)
-                                cw.writerow(l)
-        except:
-            traceback.print_exc()
-            sleep(10)
-            self.load_tmp_file(table, start)
-        if reload:
-            self.drop_table()
-            self.create_table(self.table)
-        self.delete_updated(ids_to_delete)
-        self.load_bcp_db()
+
+        conn = db.getconn()
+        with conn as c:
+            with c.cursor() as cursor:
+                try:
+                    self.create_folder()
+                    with open(self.root+self.filename, 'w') as f:
+                        cw = csv.writer(f, delimiter='|')
+                        for pid in pids:
+                            print(pid)
+                            meta = {
+                                "practice": {
+                                    "id": pid,
+                                    "fetch_modified_since": start
+                                },
+                                "version": 1,
+                                "data_to_fetch": {
+                                    f"{self.table}": {"records_per_entity": 5000}
+                                }}
+                            for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
+                                x = ndjson.loads(s)
+                                for p in x:
+                                    ids_to_delete = []
+                                    ia = ids_to_delete.append
+                                    for i in p.get('data', []):
+                                        l = list(i.values())
+                                        ia(l[0])
+                                        l = [cleanup(_) for _ in l]
+                                        l.insert(1, pid)
+                                        cw.writerow(l)
+                                cursor.execute(f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
+                except:
+                    traceback.print_exc()
+                    sleep(10)
+                    self.load_tmp_file(table, start)
+                if reload:
+                    self.drop_table()
+                    self.create_table(self.table)
+                self.load_bcp_db()
 
     def delete_updated(self,ids):
         SQL = f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids))}); '''
@@ -251,6 +255,7 @@ def scheduled(interval):
     import time
     start = time.perf_counter()
     x = arrow.now().shift(hours=-interval).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+    print(x)
     tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
     'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
     for t in tables:
@@ -262,7 +267,7 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    scheduled(3)
+    scheduled(1)
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = 'dbo.vx_ledger.csv'
