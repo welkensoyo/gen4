@@ -1,9 +1,10 @@
 from gevent import spawn
 import schedule
 
-def sixam():
-    return
+def midnight():
+    from API.PMS import velox
+    spawn(velox.reset)
 
 def set():
-    schedule.every().day.at("06:00").do(sixam)
+    schedule.every().day.at("00:00").do(midnight)
 

@@ -1,2 +1,3 @@
-import arrow
-arrow.now().format(arrow.FORMAT_ISO8601)
+x = [1,2,4,5]
+x = ','.join(map(str, x))
+print(x)

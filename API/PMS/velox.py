@@ -102,7 +102,7 @@ class API:
             self.filename = f'dbo.vx_{self.table}-{pid}.csv'
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f)
-                print(pid)
+                # print(pid)
                 meta = {
                     "practice": {
                         "id": pid,
@@ -125,6 +125,8 @@ class API:
     def load_tmp_file(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         self.table = table
         self.filename = f'dbo.vx_{self.table}.csv'
+        ids_to_delete = []
+        ia = ids_to_delete.append
         def cleanup(val):
             val = str(val)
             if val == 'None':
@@ -140,7 +142,7 @@ class API:
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f, delimiter='|')
                 for pid in pids:
-                    print(pid)
+                    # print(pid)
                     meta = {
                         "practice": {
                             "id": pid,
@@ -154,6 +156,7 @@ class API:
                         x = ndjson.loads(s)
                         for p in x:
                             for i in p.get('data', []):
+                                ia(i[0])
                                 l = [cleanup(_) for _ in list(i.values())]
                                 l.insert(1, pid)
                                 cw.writerow(l)
@@ -164,7 +167,13 @@ class API:
         if reload:
             self.drop_table()
             self.create_table(self.table)
+        self.delete_updated(ids_to_delete)
         self.load_bcp_db()
+
+    def delete_updated(self,ids):
+        SQL = f'''DELETE FROM {self.table} WHERE id in ({','.join(map(str, ids))}); '''
+        db.execute(SQL)
+        return self
 
     def load_bcp_db(self, table= ''):
         if table:
@@ -173,7 +182,7 @@ class API:
             self.filename = f'dbo.vx_{self.table}.csv'
         # bcp = f'/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_{self.table} in "{self.root}{self.filename}" -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -q -c -t "," '
         bcp = f'/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_{self.table} in "{self.root}{self.filename}" -b 5000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
-        print(bcp)
+        # print(bcp)
         os.system(bcp)
         return self
 
@@ -194,7 +203,7 @@ class API:
 
     def create_table(self, tablename):
         try:
-            print(tablename)
+            # print(tablename)
             x = j.dc(self.datastream(tablename))
             txt = ''
             for col in x['properties']['fields']['items']['enum']:
@@ -230,7 +239,6 @@ def reset():
     # v.load_tmp_file()
     # v.load_bcp_db()
     tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
-    # tables = ('ledger', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
     for t in tables:
         print(t)
         v = API()
@@ -253,8 +261,7 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    scheduled(10)
-    # reset()
+    reset()
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = 'dbo.vx_ledger.csv'

@@ -1,5 +1,5 @@
 import API.reports as r
-import uuid
+from bottle import abort
 from API.njson import dc, lc, checkuuid, b64e, jc, loads
 import API.cache as cache
 from API.clinic import API as Practice
@@ -47,6 +47,8 @@ class API:
         except:
             self.request_details = {'mode':'Internal'}
         self.pl['ip'] = self.request_details.get('REMOTE_ADDR') or '127.0.0.1'
+        if not self.apikey == '8725c240-f1bc-41df-87c5-b9738b3cc75a':
+            abort(500, 'Oops please check API specs and try again...')
 
     # def login(self):
     #     if self.apikey:

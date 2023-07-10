@@ -53,11 +53,11 @@ class SQLcursor:
         # Auto Reconnect
         global _conn
         if not _conn:
-            print('Attempting Connection To SQL...')
+            # print('Attempting Connection To SQL...')
             while not _conn:
                 try:
                     _conn = conn(dsn)
-                    print('Connection To SQL Established')
+                    # print('Connection To SQL Established')
                 except ConnectionError:
                     raise
                 except:
@@ -121,14 +121,14 @@ class SQLcursor:
                 except TypeError:
                     cursor.execute(PSQL, args[0])
                 except ValueError:
-                    cursor.execute(PSQL, tuple(args[0]))
+                    cursor.execute(PSQL, tuple(args))
                 except:
                     print(sys._getframe().f_back.f_code)
                     print(sys._getframe().f_back.f_code.co_name)
                     traceback.print_exc()
                     return ()
                 finally:
-                    return close()
+                    close()
 
     def execute2(self, PSQL, *args):
         with _conn as c:
@@ -147,7 +147,7 @@ class SQLcursor:
                     print(str(exc))
                     return ()
                 finally:
-                    return close()
+                    close()
 
     def fetchmany(self, PSQL, *args):
         with _conn as c:

@@ -40,8 +40,8 @@ def _api(command=None, option='', option2=''):
     query = json.merge_dicts(dict(request.forms), dict(request.query.decode()))
     apikey = query.pop('apikey', None) or request.headers.get('Authorization', '').replace('bearer', '').replace('Bearer', '').replace('BEARER', '').strip() or query.pop('sessionkey', None)
     payload = json.dc(request.json) or query
-    # if not apikey:
-    #     abort(401, 'Oops, Please check API specifictions')
+    if not apikey:
+        abort(401, 'Oops, Please check API specifictions')
     payload['option'] = option
     payload['option2'] = option2
     wapi = a.API(payload, apikey, request.environ, request.method.lower())
@@ -72,6 +72,8 @@ def handle_websocket():
         abort(400, 'Expected WebSocket request.')
     query = json.merge_dicts(dict(request.forms), dict(request.query.decode()))
     apikey = query.pop('apikey', None) or request.headers.get('Authorization', '').replace('bearer', '').replace('Bearer', '').replace('BEARER', '').strip() or query.pop('sessionkey', None) or query.pop('iframekey', None)
+    if not apikey:
+        abort(400, 'Closed Connection.')
     while 1:
         message = None
         try:
@@ -107,8 +109,7 @@ def handle_websocket():
 
 @get('/report/<name>')
 def _report(name=None):
-    report = r(name)
-    return template(f'reports/{name}.tpl', name=name, meta=json.jc(report.meta), schema=report.schema)
+    return template(f'reports/{name}.tpl', name=name)
 
 
 @get('/testgrid')
