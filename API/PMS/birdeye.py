@@ -84,15 +84,14 @@ class API:
         for each in j.dc(self.transmit(url, meta, mode='GET')):
             row = []
             for c in columns:
-                match c:
-                    case 'surveyId':
-                        row.append(int(each[c]))
-                    case 'created':
-                        row.append(arrow.get(each[c]).format('YYYY-MM-DD hh:mm:ss'))
-                    case 'lastModified':
-                        row.append(arrow.get(each[c]).format('YYYY-MM-DD hh:mm:ss'))
-                    case other:
-                        row.append(str(each[c]))
+                if c == 'surveyId':
+                    row.append(int(each[c]))
+                elif c == 'created':
+                    row.append(arrow.get(each[c]).format('YYYY-MM-DD hh:mm:ss'))
+                elif c == 'lastModified':
+                    row.append(arrow.get(each[c]).format('YYYY-MM-DD hh:mm:ss'))
+                else:
+                    row.append(str(each[c]))
             db.execute(qry['surveys'], *row)
         return self
 
