@@ -156,9 +156,9 @@ class API:
                         x = ndjson.loads(s)
                         for p in x:
                             for i in p.get('data', []):
-                                il = list(i.values())
-                                ia(il[0])
-                                l = [cleanup(_) for _ in il]
+                                l = list(i.values())
+                                ia(l[0])
+                                l = [cleanup(_) for _ in l]
                                 l.insert(1, pid)
                                 cw.writerow(l)
         except:
