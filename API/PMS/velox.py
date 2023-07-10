@@ -156,8 +156,9 @@ class API:
                         x = ndjson.loads(s)
                         for p in x:
                             for i in p.get('data', []):
-                                ia(i[0])
-                                l = [cleanup(_) for _ in list(i.values())]
+                                il = list(i.values())
+                                ia(il[0])
+                                l = [cleanup(_) for _ in il]
                                 l.insert(1, pid)
                                 cw.writerow(l)
         except:
@@ -171,7 +172,7 @@ class API:
         self.load_bcp_db()
 
     def delete_updated(self,ids):
-        SQL = f'''DELETE FROM {self.table} WHERE id in ({','.join(map(str, ids))}); '''
+        SQL = f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids))}); '''
         db.execute(SQL)
         return self
 
@@ -261,7 +262,7 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    reset()
+    scheduled(3)
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = 'dbo.vx_ledger.csv'
