@@ -307,7 +307,7 @@ def scheduled(interval):
 if __name__=='__main__':
     os.chdir('../../')
     v = API()
-    scheduled(10)
+    scheduled(3)
 
 
     #45052.6 rows per sec.
