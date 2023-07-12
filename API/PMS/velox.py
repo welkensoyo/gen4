@@ -16,8 +16,6 @@ import csv
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
-pids = [1438, 1404, 1446, 1429, 1442, 1489, 1425, 1405, 1413, 1402, 1450, 1464, 1401, 1444, 1408, 1398, 1485, 1403, 1458, 1455, 1382, 1406, 1381, 1439, 1441, 1440, 1498, 1448, 1407, 1414, 1410, 1396, 1486, 1449, 1443, 1409, 1068, 1431, 1426, 1397, 1380, 1453, 1435, 1447, 1434, 1411, 1436, 1379, 1400, 1432, 1399, 1020, 1430, 1433, 1412, 1454, 1589, 1588, 1606, 1605, 1616, 1617]
-pids.sort()
 
 class API:
     def __init__(self, qa=False):
@@ -32,6 +30,14 @@ class API:
             'Cookie': 'authToken=###########'
         }
         self.authorization()
+        self.get_pids()
+
+    def get_pids(self):
+        SQL = 'SELECT id FROM dbo.vx_practices'
+        pids = db.fetchall(SQL)
+        self.pids = [x[0] for x in pids]
+        return self
+
 
     def authorization(self):
         self.url = self.pre_url+'/public/auth'
@@ -56,6 +62,44 @@ class API:
     def appointments(self): return self.datastream('appointments')
     def treatments(self): return self.datastream('treatments')
     def ledger(self): return self.datastream('ledger')
+
+    def practices(self):
+        txt = ''
+        tablename = 'practices'
+        self.url = f"{self.pre_url}/private/practices"
+        x = j.dc(self.transmit(self.url))
+        cols = list(x['practices'][0].keys())
+        for col in cols:
+            if col == 'id':
+                txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE dbo.vx_{tablename} 
+                    (id bigint, '''
+            elif '_id' in col:
+                txt += f'{col} varchar(255),'
+            elif col in ('duration', 'status', 'tx_status'):
+                txt += f'{col} INT,'
+            elif col in ('amount', 'cost', 'co_pay'):
+                txt += f'{col} DECIMAL(19, 4),'
+            elif col in ('',):
+                txt += f'{col} DECIMAL(19, 4),'
+            elif 'date' in col:
+                txt += f'{col} DATETIME2,'
+            elif col in ('dob','last_sync'):
+                txt += f'{col} DATETIME2,'
+            else:
+                txt += f'{str(col)} varchar(255),'
+
+        txt = txt[:-1] + f''');'''
+        db.execute(f''' DROP TABLE dbo.vx_{tablename}; ''')
+        db.execute(txt)
+        db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON dbo.vx_{tablename}  (id) with ignore_dup_key; ''')
+        vars = '%s,'*len(cols)
+        PSQL = f'INSERT INTO dbo.vx_{tablename} VALUES ({vars[0:-1]})'
+        for p in x['practices']:
+            row = []
+            for c in cols:
+                row.append(str(p[c]))
+            db.execute(PSQL, *row)
+        return self
 
 
     def datastream(self, path):
@@ -98,7 +142,7 @@ class API:
                 val = arrow.get(val).format('YYYY-MM-DD hh:mm:ss')
             return val
 
-        for pid in pids:
+        for pid in self.pids:
             self.filename = f'dbo.vx_{self.table}-{pid}.csv'
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f)
@@ -136,44 +180,43 @@ class API:
                 return val
             return val
 
-        conn = db.getconn()
-        with conn as c:
-            with c.cursor() as cursor:
-                try:
-                    self.create_folder()
-                    with open(self.root+self.filename, 'w') as f:
-                        cw = csv.writer(f, delimiter='|')
-                        for pid in pids:
-                            print(pid)
-                            meta = {
-                                "practice": {
-                                    "id": pid,
-                                    "fetch_modified_since": start
-                                },
-                                "version": 1,
-                                "data_to_fetch": {
-                                    f"{self.table}": {"records_per_entity": 5000}
-                                }}
-                            for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
-                                x = ndjson.loads(s)
-                                for p in x:
-                                    ids_to_delete = []
-                                    ia = ids_to_delete.append
-                                    for i in p.get('data', []):
-                                        l = list(i.values())
-                                        ia(l[0])
-                                        l = [cleanup(_) for _ in l]
-                                        l.insert(1, pid)
-                                        cw.writerow(l)
-                                cursor.execute(f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
-                except:
-                    traceback.print_exc()
-                    sleep(10)
-                    self.load_tmp_file(table, start)
-                if reload:
-                    self.drop_table()
-                    self.create_table(self.table)
-                self.load_bcp_db()
+
+        try:
+            self.create_folder()
+            with open(self.root+self.filename, 'w') as f:
+                cw = csv.writer(f, delimiter='|')
+                for pid in self.pids:
+                    # print(pid)
+                    meta = {
+                        "practice": {
+                            "id": pid,
+                            "fetch_modified_since": start
+                        },
+                        "version": 1,
+                        "data_to_fetch": {
+                            f"{self.table}": {"records_per_entity": 5000}
+                        }}
+                    for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
+                        x = ndjson.loads(s)
+                        for p in x:
+                            ids_to_delete = []
+                            ia = ids_to_delete.append
+                            for i in p.get('data', []):
+                                l = list(i.values())
+                                ia(l[0])
+                                l = [cleanup(_) for _ in l]
+                                l.insert(1, pid)
+                                cw.writerow(l)
+                        if ids_to_delete:
+                            db.execute(f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
+        except:
+            traceback.print_exc()
+            sleep(10)
+            self.load_tmp_file(table, start)
+        if reload:
+            self.drop_table()
+            self.create_table(self.table)
+        self.load_bcp_db()
 
     def delete_updated(self,ids):
         SQL = f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids))}); '''
@@ -225,7 +268,7 @@ class API:
                     txt += f'{col} DECIMAL(19, 4),'
                 elif 'date' in col:
                     txt += f'{col} DATETIME2,'
-                elif col in ('dob'):
+                elif col in ('dob',):
                     txt += f'{col} DATETIME2,'
                 else:
                     txt += f'{col} varchar(255),'
@@ -233,21 +276,17 @@ class API:
             db.execute(txt)
             db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON dbo.vx_{tablename}  (practice_id, id) with ignore_dup_key; ''')
         except:
-            print(x)
             traceback.print_exc()
         return self
 
 def reset():
     import time
     start = time.perf_counter()
-    # v.table = 'appointments'
-    # v.load_tmp_file()
-    # v.load_bcp_db()
+    API().practices()
     tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
     for t in tables:
         print(t)
-        v = API()
-        v.load_tmp_file(t, reload=True)
+        API().load_tmp_file(t, reload=True)
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
@@ -267,7 +306,10 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    scheduled(1)
+    v = API()
+    scheduled(10)
+
+
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = 'dbo.vx_ledger.csv'
