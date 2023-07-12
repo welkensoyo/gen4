@@ -59,7 +59,7 @@ class SQLcursor:
             while not _conn:
                 try:
                     _conn = conn(dsn)
-                    print('Connection To SQL Established')
+                    # print('Connection To SQL Established')
                 except ConnectionError:
                     raise
                 except:
