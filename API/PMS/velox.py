@@ -1,4 +1,4 @@
-from gevent import monkey
+from gevent import monkey, spawn
 monkey.patch_all()
 from gevent import sleep
 from API.config import velox, sqlserver as ss
@@ -146,7 +146,7 @@ class API:
             self.filename = f'dbo.vx_{self.table}-{pid}.csv'
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f)
-                # print(pid)
+                print(f'Practice ID: {pid}')
                 meta = {
                     "practice": {
                         "id": pid,
@@ -186,7 +186,7 @@ class API:
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f, delimiter='|')
                 for pid in self.pids:
-                    # print(pid)
+                    print(pid)
                     meta = {
                         "practice": {
                             "id": pid,
@@ -207,8 +207,8 @@ class API:
                                 l = [cleanup(_) for _ in l]
                                 l.insert(1, pid)
                                 cw.writerow(l)
-                        if ids_to_delete:
-                            db.execute(f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
+                            if ids_to_delete and not reload:
+                                db.execute(f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
         except:
             traceback.print_exc()
             sleep(10)
@@ -307,7 +307,7 @@ def scheduled(interval):
 if __name__=='__main__':
     os.chdir('../../')
     v = API()
-    scheduled(3)
+    scheduled(10)
 
 
     #45052.6 rows per sec.
