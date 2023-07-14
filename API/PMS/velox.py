@@ -208,6 +208,7 @@ class API:
                                 l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete and not reload:
+                                print(f'UPDATED {len(ids_to_delete)}')
                                 db.execute(f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
         except:
             traceback.print_exc()
@@ -307,7 +308,7 @@ def scheduled(interval):
 if __name__=='__main__':
     os.chdir('../../')
     v = API()
-    scheduled(10)
+    scheduled(2)
 
 
     #45052.6 rows per sec.
