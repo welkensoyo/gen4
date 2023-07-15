@@ -21,6 +21,8 @@ class API:
     def __init__(self, qa=False):
 
         self.root = str(Path.home())+'/dataload/'
+        self.prefix = 'dbo.vx_'
+        self.db = 'gen4_dw'
         self.filename = ''
         self.pre_url = 'https://ds-prod.tx24sevendev.com/v1'
         if qa:
@@ -33,7 +35,7 @@ class API:
         self.get_pids()
 
     def get_pids(self):
-        SQL = 'SELECT id FROM dbo.vx_practices'
+        SQL = 'SELECT id FROM {self.prefix}practices'
         pids = db.fetchall(SQL)
         self.pids = [x[0] for x in pids]
         return self
@@ -71,7 +73,7 @@ class API:
         cols = list(x['practices'][0].keys())
         for col in cols:
             if col == 'id':
-                txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE dbo.vx_{tablename} 
+                txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
                     (id bigint, '''
             elif '_id' in col:
                 txt += f'{col} varchar(255),'
@@ -89,11 +91,11 @@ class API:
                 txt += f'{str(col)} varchar(255),'
 
         txt = txt[:-1] + f''');'''
-        db.execute(f''' DROP TABLE dbo.vx_{tablename}; ''')
+        db.execute(f''' DROP TABLE {self.prefix}{tablename}; ''')
         db.execute(txt)
-        db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON dbo.vx_{tablename}  (id) with ignore_dup_key; ''')
+        db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
         vars = '%s,'*len(cols)
-        PSQL = f'INSERT INTO dbo.vx_{tablename} VALUES ({vars[0:-1]})'
+        PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
         for p in x['practices']:
             row = []
             for c in cols:
@@ -143,7 +145,7 @@ class API:
             return val
 
         for pid in self.pids:
-            self.filename = f'dbo.vx_{self.table}-{pid}.csv'
+            self.filename = f'{self.prefix}{self.table}-{pid}.csv'
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f)
                 print(f'Practice ID: {pid}')
@@ -168,7 +170,7 @@ class API:
 
     def load_tmp_file(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         self.table = table
-        self.filename = f'dbo.vx_{self.table}.csv'
+        self.filename = f'{self.prefix}{self.table}.csv'
         def cleanup(val):
             val = str(val)
             if val == 'None':
@@ -209,7 +211,7 @@ class API:
                                 cw.writerow(l)
                             if ids_to_delete and not reload:
                                 print(f'UPDATED {len(ids_to_delete)}')
-                                db.execute(f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
+                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
         except:
             traceback.print_exc()
             sleep(10)
@@ -220,7 +222,7 @@ class API:
         self.load_bcp_db()
 
     def delete_updated(self,ids):
-        SQL = f'''DELETE FROM dbo.vx_{self.table} WHERE id in ({','.join(map(str, ids))}); '''
+        SQL = f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids))}); '''
         db.execute(SQL)
         return self
 
@@ -228,9 +230,9 @@ class API:
         if table:
             self.table = table
         if not self.filename:
-            self.filename = f'dbo.vx_{self.table}.csv'
-        # bcp = f'/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_{self.table} in "{self.root}{self.filename}" -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -q -c -t "," '
-        bcp = f'/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_{self.table} in "{self.root}{self.filename}" -b 5000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
+            self.filename = f'{self.prefix}{self.table}.csv'
+        # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -q -c -t "," '
+        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 5000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
         # print(bcp)
         os.system(bcp)
         return self
@@ -242,7 +244,7 @@ class API:
             os.makedirs(p)
 
     def drop_table(self):
-        PSQL = f''' DROP TABLE dbo.vx_{self.table}; '''
+        PSQL = f''' DROP TABLE {self.prefix}{self.table}; '''
         db.execute(PSQL)
         return self
 
@@ -257,7 +259,7 @@ class API:
             txt = ''
             for col in x['properties']['fields']['items']['enum']:
                 if col == 'id':
-                    txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE dbo.vx_{tablename} 
+                    txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
                     (id bigint, practice_id int, '''
                 elif '_id' in col:
                     txt += f'{col} varchar(255),'
@@ -275,7 +277,7 @@ class API:
                     txt += f'{col} varchar(255),'
             txt = txt[:-1]+f''');'''
             db.execute(txt)
-            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON dbo.vx_{tablename}  (practice_id, id) with ignore_dup_key; ''')
+            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (practice_id, id) with ignore_dup_key; ''')
         except:
             traceback.print_exc()
         return self
@@ -313,7 +315,7 @@ if __name__=='__main__':
 
     #45052.6 rows per sec.
     # v.create_split_files()
-    # v.filename = 'dbo.vx_ledger.csv'
+    # v.filename = '{self.prefix}ledger.csv'
     # print(' varchar(256), '.join(j.dc(v.providers())['properties']['fields']['items']['enum']))
     # v.load_bcp_db()
 

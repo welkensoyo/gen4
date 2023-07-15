@@ -34,7 +34,6 @@ class API:
             'Accept': "application/json",
         }
 
-
     def bulk(self, table, filename):
         bcp = f'/opt/mssql-tools/bin/bcp gen4_dw.birdeye.{table} in "{self.root}{filename}" -b 5000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
         # print(bcp)
@@ -72,7 +71,6 @@ class API:
         meta['sortby'] = 'date'
         meta['businessNumber']  = self.id
         return self.transmit(url, meta, mode='POST', body={'startDate':start, 'endDate': end})
-
 
     def all_surveys(self, meta):
         url = f'{self.preurl}/survey/business/{self.id}/all'
@@ -160,7 +158,6 @@ class API:
             create_file(x)
         return self
 
-
     def campaign(self):
         url = f'{self.preurl}/campaign/external/campaign-request-url'
         customers = [x[0] for x in db.fetchall(qry['customers'])]
@@ -176,6 +173,8 @@ class API:
                 url = url+'?'+urlencode(meta)
                 print(url)
                 r = upool.request(mode, url, body=j.jc(body), headers=self.headers, retries=3)
+            else:
+                r = upool.request(mode, url, headers=self.headers, retries=3)
         elif meta:
             if 'businessId' not in meta:
                 meta['businessId'] = self.id

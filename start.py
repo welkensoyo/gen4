@@ -57,7 +57,7 @@ if __name__ == '__main__':
     botapp = SessionMiddleware(botapp, config.beakerconfig)
     botapp = WhiteNoise(botapp)
     botapp.add_files(staticfolder, prefix='static/')
-    botapp.add_files('dist', prefix='dist/')
+    # botapp.add_files('dist', prefix='dist/')
     scheduler.start()
     server = WSGIServer(("0.0.0.0", 80), botapp , handler_class=WebSocketHandler)
 
