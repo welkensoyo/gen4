@@ -35,7 +35,7 @@ class API:
         self.get_pids()
 
     def get_pids(self):
-        SQL = 'SELECT id FROM {self.prefix}practices'
+        SQL = f'SELECT id FROM {self.prefix}practices'
         pids = db.fetchall(SQL)
         self.pids = [x[0] for x in pids]
         return self
@@ -169,6 +169,7 @@ class API:
             self.load_bcp_db()
 
     def load_tmp_file(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
+        print('LOAD TMP FILE')
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
         def cleanup(val):
