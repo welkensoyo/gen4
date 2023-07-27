@@ -278,6 +278,7 @@ class API:
                 else:
                     txt += f'{col} varchar(255),'
             txt = txt[:-1]+f''');'''
+            print(txt)
             db.execute(txt)
             db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (practice_id, id) with ignore_dup_key; ''')
         except:
@@ -319,7 +320,8 @@ def scheduled(interval):
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
-
+if __name__=='__main__':
+    API().create_table('ledger')
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = '{self.prefix}ledger.csv'
