@@ -127,3 +127,7 @@ class API:
         }
         return methods[self.option](self.pl)
 
+    def velox(self):
+        if self.option == 'reset':
+            from API.PMS import velox
+            velox.reset()
