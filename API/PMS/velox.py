@@ -296,6 +296,15 @@ def reset():
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
+def reset_table(tablename):
+    import time
+    start = time.perf_counter()
+    # print('Updating practices')
+    # API().practices()
+    API().load_tmp_file(tablename, reload=True)
+    print(f'IT TOOK: {time.perf_counter() - start}')
+    return
+
 def scheduled(interval):
     import time
     start = time.perf_counter()
