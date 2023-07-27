@@ -184,6 +184,7 @@ class API:
 
 
         try:
+            print(f'Creating Folder {self.root}+{self.filename}')
             self.create_folder()
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f, delimiter='|')
@@ -285,7 +286,8 @@ class API:
 def reset():
     import time
     start = time.perf_counter()
-    API().practices()
+    # print('Updating practices')
+    # API().practices()
     tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
     for t in tables:
         print(t)
@@ -309,8 +311,7 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    v = API()
-    scheduled(2)
+    reset()
 
 
     #45052.6 rows per sec.

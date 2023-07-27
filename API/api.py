@@ -1,3 +1,4 @@
+from gevent import spawn
 import API.reports as r
 from bottle import abort
 from API.njson import dc, lc, checkuuid, b64e, jc, loads
@@ -130,4 +131,4 @@ class API:
     def velox(self):
         if self.option == 'reset':
             from API.PMS import velox
-            velox.reset()
+            spawn(velox.reset)
