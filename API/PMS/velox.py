@@ -309,10 +309,6 @@ def scheduled(interval):
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
-if __name__=='__main__':
-    os.chdir('../../')
-    reset()
-
 
     #45052.6 rows per sec.
     # v.create_split_files()
