@@ -185,7 +185,7 @@ class API:
 
 
         try:
-            print(f'Creating Folder {self.root}+{self.filename}')
+            print(f'Creating Folder {self.root+self.filename}')
             self.create_folder()
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f, delimiter='|')
@@ -258,6 +258,7 @@ class API:
         try:
             # print(tablename)
             x = j.dc(self.datastream(tablename))
+            print(x)
             txt = ''
             for col in x['properties']['fields']['items']['enum']:
                 if col == 'id':
@@ -321,7 +322,8 @@ def scheduled(interval):
     return
 
 if __name__=='__main__':
-    API().create_table('ledger')
+    os.chdir('../../')
+    reset()
     #45052.6 rows per sec.
     # v.create_split_files()
     # v.filename = '{self.prefix}ledger.csv'

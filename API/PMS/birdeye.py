@@ -51,9 +51,9 @@ class API:
         url = f'{self.preurl}/review/businessId/{meta.pop("id")}/summary'
         return self.transmit(url, meta, mode='GET')
 
-    def employees(self, meta):
-        url = f'{self.preurl}/employee/{meta.pop("id")}'
-        return self.transmit(url, meta, mode='GET')
+    def employees(self):
+        url = f'{self.preurl}/employee/{self.id}'
+        return self.transmit(url, {}, mode='GET')
 
     def survey(self, meta):
         url = f'{self.preurl}/survey/{self.id}'
@@ -95,7 +95,8 @@ class API:
 
     def conversations(self):
         url = f'{self.preurl}/messenger/export'
-        return self.transmit(url, {}, mode='POST')
+        meta = {'businessNumber':self.id, 'apiKey':self.key}
+        return self.transmit(url, {}, mode='POST', body=meta)
 
     def reviews(self, meta):
         url = f'{self.preurl}/review/businessId/{meta.get("id")}'
@@ -161,23 +162,37 @@ class API:
     def campaign(self):
         url = f'{self.preurl}/campaign/external/campaign-request-url'
         customers = [x[0] for x in db.fetchall(qry['customers'])]
-        for customer in customers[0:10]:
+        for customer in customers:
             print(customer)
             body={'businessId':self.id, 'customerId':customer}
             print(self.transmit(url, {}, mode='POST', body=body))
+
+    def aggregation(self):
+        url = self.preurl+f'/aggregation/business/{self.id}'
+        return self.transmit(url, {}, mode='GET')
+
+    def category(self):
+        url = self.preurl + f'/category/all'
+        return self.transmit(url, {}, mode='GET')
+
+    def competitors(self):
+        url = 'https://api.birdeye.com/resources/v1/business/162880365742128/competitors?api_key=3U8cPHsVV7h1bvAt0mtr8TQpAa3adeIF'
+        r = upool.request('GET', url, headers=self.headers, retries=3)
+        return r.data.decode()
 
     def transmit(self, url, meta, mode='POST', body=None):
         meta['api_key'] = self.key
         if mode.upper() == 'POST':
             if body:
-                url = url+'?'+urlencode(meta)
-                print(url)
+                if meta:
+                    url = url+'?'+urlencode(meta)
                 r = upool.request(mode, url, body=j.jc(body), headers=self.headers, retries=3)
             else:
                 r = upool.request(mode, url, headers=self.headers, retries=3)
         elif meta:
             if 'businessId' not in meta:
                 meta['businessId'] = self.id
+            print(meta)
             r = upool.request(mode, url, fields=meta, headers=self.headers, retries=3)
         else:
             if 'businessId' not in meta:
@@ -216,7 +231,7 @@ def create_table(d):
         except:
             pass
         return 'VARCHAR(max)'
-    keys = list(r[0].keys())
+    keys = list(d[0].keys())
     total = len(keys)
     inputs = '%s,'*total
     text = ''
@@ -227,16 +242,17 @@ def create_table(d):
 
 if __name__ == "__main__":
     b = API()
-    for s in (21182,21905,25372,34718):
-        x = j.dc(b.survey_response(s, '01/01/2001'))
-        if r:= x.get('responseList'):
-            print(len(r))
-            print(len(r[0]))
-            t = create_table(r[0])
-            keys = ['responseId', 'requestDate', 'responseDate', 'completed', 'questionCount', 'locale', 'surveyId', 'surveyName', 'surveyType', 'businessId', 'locationName', 'businessNumber', 'businessLocationName', 'customerId', 'customerName', 'customerEmail', 'customerPhone', 'assistedByName,', 'assistedByEmail', 'assistedByPhone', 'ticketed', 'answers', 'overallScore']
-            for each in r:
-                response = [check(each.get(k,'')) for k in keys]
-                db.execute(qry['responses'], *response)
+    print(b.competitors())
+    # for s in (21182,21905,25372,34718):
+    #     x = j.dc(b.survey_response(s, '01/01/2001'))
+    #     if r:= x.get('responseList'):
+    #         print(len(r))
+    #         print(len(r[0]))
+    #         t = create_table(r[0])
+    #         keys = ['responseId', 'requestDate', 'responseDate', 'completed', 'questionCount', 'locale', 'surveyId', 'surveyName', 'surveyType', 'businessId', 'locationName', 'businessNumber', 'businessLocationName', 'customerId', 'customerName', 'customerEmail', 'customerPhone', 'assistedByName,', 'assistedByEmail', 'assistedByPhone', 'ticketed', 'answers', 'overallScore']
+    #         for each in r:
+    #             response = [check(each.get(k,'')) for k in keys]
+    #             db.execute(qry['responses'], *response)
 
 
 
