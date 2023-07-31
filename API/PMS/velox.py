@@ -219,7 +219,6 @@ class API:
             sleep(10)
             self.load_tmp_file(table, start)
         if reload:
-            self.drop_table()
             self.create_table(self.table)
         self.load_bcp_db()
 
@@ -258,30 +257,30 @@ class API:
         try:
             # print(tablename)
             x = j.dc(self.datastream(tablename))
-            print(x)
             txt = ''
-            for col in x['properties']['fields']['items']['enum']:
-                if col == 'id':
-                    txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
-                    (id bigint, practice_id int, '''
-                elif '_id' in col:
-                    txt += f'{col} varchar(255),'
-                elif col in ('duration', 'status', 'tx_status'):
-                    txt += f'{col} INT,'
-                elif col in ('amount','cost','co_pay'):
-                    txt += f'{col} DECIMAL(19, 4),'
-                elif col in ('',):
-                    txt += f'{col} DECIMAL(19, 4),'
-                elif 'date' in col:
-                    txt += f'{col} DATETIME2,'
-                elif col in ('dob',):
-                    txt += f'{col} DATETIME2,'
-                else:
-                    txt += f'{col} varchar(255),'
-            txt = txt[:-1]+f''');'''
-            print(txt)
-            db.execute(txt)
-            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (practice_id, id) with ignore_dup_key; ''')
+            if 'properties' in x:
+                self.drop_table()
+                for col in x['properties']['fields']['items']['enum']:
+                    if col == 'id':
+                        txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
+                        (id bigint, practice_id int, '''
+                    elif '_id' in col:
+                        txt += f'{col} varchar(255),'
+                    elif col in ('duration', 'status', 'tx_status'):
+                        txt += f'{col} INT,'
+                    elif col in ('amount','cost','co_pay'):
+                        txt += f'{col} DECIMAL(19, 4),'
+                    elif col in ('',):
+                        txt += f'{col} DECIMAL(19, 4),'
+                    elif 'date' in col:
+                        txt += f'{col} DATETIME2,'
+                    elif col in ('dob',):
+                        txt += f'{col} DATETIME2,'
+                    else:
+                        txt += f'{col} varchar(255),'
+                txt = txt[:-1]+f''');'''
+                db.execute(txt)
+                db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (practice_id, id) with ignore_dup_key; ''')
         except:
             traceback.print_exc()
         return self
