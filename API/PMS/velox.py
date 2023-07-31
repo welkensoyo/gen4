@@ -324,11 +324,6 @@ def scheduled(interval):
 if __name__=='__main__':
     os.chdir('../../')
     reset()
-    #45052.6 rows per sec.
-    # v.create_split_files()
-    # v.filename = '{self.prefix}ledger.csv'
-    # print(' varchar(256), '.join(j.dc(v.providers())['properties']['fields']['items']['enum']))
-    # v.load_bcp_db()
 
 
 
