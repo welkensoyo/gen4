@@ -288,8 +288,8 @@ class API:
 def reset():
     import time
     start = time.perf_counter()
-    # print('Updating practices')
-    # API().practices()
+    print('Updating practices')
+    API().practices()
     tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
     for t in tables:
         print(t)
@@ -300,8 +300,8 @@ def reset():
 def reset_table(tablename):
     import time
     start = time.perf_counter()
-    # print('Updating practices')
-    # API().practices()
+    print('Updating practices')
+    API().practices()
     API().load_tmp_file(tablename, reload=True)
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
@@ -322,7 +322,7 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    reset()
+    API().practices()
 
 
 
