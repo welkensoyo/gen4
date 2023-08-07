@@ -44,7 +44,7 @@ def check_compress():
                     if not os.path.exists(dirpath+'/'+filename+'.gz'):
                         for each in c.compress(os.path.join(dirpath, filename)):
                             print(each)
-    print('FILE COMPRESSION COMPLETED')
+    print('File optimization completed')
 
 if __name__ == '__main__':
     if config.compress:

@@ -5,6 +5,7 @@ from API.njson import dc, lc, checkuuid, b64e, jc, loads
 import API.cache as cache
 from API.clinic import API as Practice
 from API.PMS.birdeye import API as Birdeye
+import API.PMS.velox as velox
 
 def keygen():
     import uuid
@@ -113,6 +114,14 @@ class API:
             return p.upsert(self.pl['table'])
         return p.get()
 
+    def velox(self):
+        refresh = self.option2 or False
+        if self.option == 'practices':
+            return velox.API().practices().get_pids().pids
+        if self.option == 'sync':
+            if refresh:
+                return velox.reset()
+            return velox.scheduled(self.pl.get('hours') or 10)
     def birdeye(self):
         b = Birdeye()
         methods = {

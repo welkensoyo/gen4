@@ -18,7 +18,7 @@ CA = 'keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
 
 class API:
-    def __init__(self, qa=False):
+    def __init__(self, qa=False, pids=None):
 
         self.root = str(Path.home())+'/dataload/'
         self.prefix = 'dbo.vx_'
@@ -32,7 +32,9 @@ class API:
             'Cookie': 'authToken=###########'
         }
         self.authorization()
-        self.get_pids()
+        self.pids = pids
+        if not self.pids:
+            self.get_pids()
 
     def get_pids(self):
         SQL = f'SELECT id FROM {self.prefix}practices'
@@ -132,41 +134,41 @@ class API:
         except ValueError as exc:
             return False
 
-    def load_split_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
-        self.table = table
-        curpath = os.path.abspath(os.curdir)
-        print("Current path is: %s" % (curpath))
-        def cleanup(val):
-            val = str(val)
-            if val == 'None':
-                return ''
-            if val[10]=='T' and val[19]=='.' and val[-1] =='Z':
-                val = arrow.get(val).format('YYYY-MM-DD hh:mm:ss')
-            return val
-
-        for pid in self.pids:
-            self.filename = f'{self.prefix}{self.table}-{pid}.csv'
-            with open(self.root+self.filename, 'w') as f:
-                cw = csv.writer(f)
-                print(f'Practice ID: {pid}')
-                meta = {
-                    "practice": {
-                        "id": pid,
-                        "fetch_modified_since": start
-                    },
-                    "version": 1,
-                    "data_to_fetch": {
-                        f"{self.table}": {"records_per_entity": 5000}
-                    }}
-                for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
-                    x = ndjson.loads(s)
-                    for p in x:
-                        for i in p.get('data',[]):
-                            l = [cleanup(_) for _ in list(i.values())]
-                            l.insert(1, pid)
-                            cw.writerow(l)
-            self.create_table(self.table)
-            self.load_bcp_db()
+    # def load_split_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
+    #     self.table = table
+    #     curpath = os.path.abspath(os.curdir)
+    #     print("Current path is: %s" % (curpath))
+    #     def cleanup(val):
+    #         val = str(val)
+    #         if val == 'None':
+    #             return ''
+    #         if val[10]=='T' and val[19]=='.' and val[-1] =='Z':
+    #             val = arrow.get(val).format('YYYY-MM-DD hh:mm:ss')
+    #         return val
+    #
+    #     for pid in self.pids:
+    #         self.filename = f'{self.prefix}{self.table}-{pid}.csv'
+    #         with open(self.root+self.filename, 'w') as f:
+    #             cw = csv.writer(f)
+    #             print(f'Practice ID: {pid}')
+    #             meta = {
+    #                 "practice": {
+    #                     "id": pid,
+    #                     "fetch_modified_since": start
+    #                 },
+    #                 "version": 1,
+    #                 "data_to_fetch": {
+    #                     f"{self.table}": {"records_per_entity": 5000}
+    #                 }}
+    #             for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
+    #                 x = ndjson.loads(s)
+    #                 for p in x:
+    #                     for i in p.get('data',[]):
+    #                         l = [cleanup(_) for _ in list(i.values())]
+    #                         l.insert(1, pid)
+    #                         cw.writerow(l)
+    #         self.create_table(self.table)
+    #         self.load_bcp_db()
 
     def load_tmp_file(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
@@ -193,7 +195,7 @@ class API:
                     print(pid)
                     meta = {
                         "practice": {
-                            "id": pid,
+                            "id": int(pid),
                             "fetch_modified_since": start
                         },
                         "version": 1,
@@ -201,7 +203,10 @@ class API:
                             f"{self.table}": {"records_per_entity": 5000}
                         }}
                     for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
-                        x = ndjson.loads(s)
+                        try:
+                            x = ndjson.loads(s)
+                        except:
+                            break
                         for p in x:
                             ids_to_delete = []
                             ia = ids_to_delete.append
@@ -285,12 +290,16 @@ class API:
             traceback.print_exc()
         return self
 
-def reset():
+def reset(tables=None, practice=True):
     import time
     start = time.perf_counter()
     print('Updating practices')
-    API().practices()
-    tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
+    if practice:
+        API().practices()
+    if not tables:
+        tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+              'patient_referrals')
     for t in tables:
         print(t)
         API().load_tmp_file(t, reload=True)
@@ -312,7 +321,7 @@ def scheduled(interval):
     x = arrow.now().shift(hours=-interval).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
     print(x)
     tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-    'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',)
+    'patient_recall', 'operatory', 'procedure_codes', 'image_metadata','clinic','referral_sources','patient_referrals')
     for t in tables:
         print(t)
         v = API()
@@ -322,7 +331,15 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    API().practices()
+    pids = (1720,)
+    tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+              'patient_referrals')
+    for t in tables:
+        print(t)
+        v = API(pids=pids)
+        v.load_tmp_file(t, start='2001-01-01T00:00:00.000Z')
+    # reset(tables=(), practice=False)
 
 
 
