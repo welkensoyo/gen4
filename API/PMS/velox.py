@@ -319,7 +319,7 @@ def reset_table(tablename):
 def scheduled(interval):
     import time
     start = time.perf_counter()
-    x = arrow.now().shift(hours=-interval).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+    x = arrow.now().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
     print(x)
     tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
     'patient_recall', 'operatory', 'procedure_codes', 'image_metadata','clinic','referral_sources','patient_referrals')
