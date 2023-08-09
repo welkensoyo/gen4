@@ -142,6 +142,3 @@ class API:
         if self.option == 'reset':
             from API.PMS import velox
             spawn(velox.reset)
-
-    def hour(self):
-        return arrow.now().format('HH')

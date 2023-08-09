@@ -291,6 +291,7 @@ class API:
         return self
 
 def reset(tables=None, practice=True):
+    print(arrow.now().format('YYYY-MM-DD HH:mm:ss'))
     import time
     start = time.perf_counter()
     print('Updating practices')
