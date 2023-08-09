@@ -142,3 +142,7 @@ class API:
         if self.option == 'reset':
             from API.PMS import velox
             spawn(velox.reset)
+        if self.option == 'sync':
+            from API.PMS import velox
+            spawn(velox.scheduled(self.pl.get('hour') or '24'))
+            return 'Running...'
