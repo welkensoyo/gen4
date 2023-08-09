@@ -331,15 +331,8 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    pids = (1720,)
-    tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-              'patient_referrals')
-    for t in tables:
-        print(t)
-        v = API(pids=pids)
-        v.load_tmp_file(t, start='2001-01-01T00:00:00.000Z')
     # reset(tables=(), practice=False)
+    scheduled(48)
 
 
 

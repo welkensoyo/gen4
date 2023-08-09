@@ -2,6 +2,7 @@ from gevent import spawn
 import API.reports as r
 from bottle import abort
 from API.njson import dc, lc, checkuuid, b64e, jc, loads
+import arrow
 import API.cache as cache
 from API.clinic import API as Practice
 from API.PMS.birdeye import API as Birdeye
@@ -121,7 +122,7 @@ class API:
         if self.option == 'sync':
             if refresh:
                 return velox.reset()
-            return velox.scheduled(self.pl.get('hours') or 10)
+            return velox.scheduled(self.pl.get('hours') or 48)
     def birdeye(self):
         b = Birdeye()
         methods = {
@@ -141,3 +142,6 @@ class API:
         if self.option == 'reset':
             from API.PMS import velox
             spawn(velox.reset)
+
+    def hour(self):
+        return arrow.now().format('HH')
