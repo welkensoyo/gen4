@@ -119,10 +119,12 @@ class API:
         refresh = self.option2 or False
         if self.option == 'practices':
             return velox.API().practices().get_pids().pids
+        if self.option == 'reset':
+            spawn(velox.reset)
+            return 'Resetting Full Velox Data...'
         if self.option == 'sync':
-            if refresh:
-                return velox.reset()
-            return velox.scheduled(self.pl.get('hours') or 48)
+            spawn(velox.scheduled, self.pl.get('hour') or '24')
+            return 'Running...'
     def birdeye(self):
         b = Birdeye()
         methods = {
@@ -138,11 +140,3 @@ class API:
         }
         return methods[self.option](self.pl)
 
-    def velox(self):
-        if self.option == 'reset':
-            from API.PMS import velox
-            spawn(velox.reset)
-        if self.option == 'sync':
-            from API.PMS import velox
-            spawn(velox.scheduled, self.pl.get('hour') or '24')
-            return 'Running...'

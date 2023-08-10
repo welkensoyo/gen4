@@ -116,8 +116,11 @@ class API:
         self.headers['Content-Type'] = 'application/json'
         if meta:
             meta = j.jc(meta)
-            for each in upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False):
-                yield each
+            try:
+                for each in upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False):
+                    yield each
+            except:
+                yield {}
 
     def transmit(self, url, meta=None, mode='GET'):
         if meta:
