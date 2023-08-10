@@ -195,6 +195,7 @@ class API:
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f, delimiter='|')
                 for pid in self.pids:
+                    sleep(0)
                     print(pid)
                     meta = {
                         "practice": {
@@ -208,6 +209,7 @@ class API:
                     for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
                         try:
                             x = ndjson.loads(s)
+                            sleep(0)
                         except:
                             break
                         for p in x:
