@@ -296,6 +296,8 @@ class API:
         return self
 
 def reset(tables=None, practice=True):
+    from API.scheduling import everyhour
+    everyhour.pause = True
     print(arrow.now().format('YYYY-MM-DD HH:mm:ss'))
     import time
     start = time.perf_counter()
@@ -310,7 +312,8 @@ def reset(tables=None, practice=True):
         print(t)
         API().load_tmp_file(t, reload=True)
     print(f'IT TOOK: {time.perf_counter() - start}')
-    return
+    everyhour.pause = False
+    return tables
 
 def reset_table(tablename):
     import time
@@ -337,10 +340,10 @@ def scheduled(interval):
 
 if __name__=='__main__':
     os.chdir('../../')
-    reset(tables=('appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-              'patient_referrals'), practice=False)
-    # scheduled(48)
+    # reset(tables=('appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+    #           'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+    #           'patient_referrals'), practice=False)
+    scheduled(48)
 
 
 
