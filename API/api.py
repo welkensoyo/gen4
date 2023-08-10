@@ -130,8 +130,7 @@ class API:
             everyhour.pause = True
         elif self.option =='resume':
             everyhour.pause = False
-        elif self.option =='active':
-            return everyhour.pause
+        return str(everyhour.pause)
 
 
     def birdeye(self):
