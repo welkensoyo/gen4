@@ -116,7 +116,6 @@ class API:
         return p.get()
 
     def velox(self):
-        refresh = self.option2 or False
         if self.option == 'practices':
             return velox.API().practices().get_pids().pids
         elif self.option == 'reset':
