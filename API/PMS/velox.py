@@ -372,7 +372,7 @@ if __name__=='__main__':
     # reset(tables=('appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
     #           'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
     #           'patient_referrals'), practice=False)
-    scheduled(48)
+    scheduled(72)
 
 
 
