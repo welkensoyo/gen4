@@ -114,17 +114,20 @@ class API:
         return p.get()
 
     def velox(self):
+        from API.scheduling import everyhour
         if self.option == 'practices':
             return velox.API().practices().get_pids().pids
         elif self.option == 'reset':
             spawn(velox.reset)
             return 'Resetting Full Velox Data...'
         elif self.option == 'sync':
+            if everyhour.pause:
+                return 'Sync already in progress...'
             spawn(velox.scheduled, self.pl.get('hour') or '24')
             return 'Running...'
-
-        from API.scheduling import everyhour
-        if self.option =='pause':
+        elif self.option in ('lastupdated','log'):
+            return velox.get_log()
+        elif self.option =='pause':
             everyhour.pause = True
         elif self.option =='resume':
             everyhour.pause = False

@@ -318,24 +318,41 @@ class API:
             traceback.print_exc()
         return self
 
+def last_updated(table='ledger'):
+    t = {'ledger':'transaction_date', 'practices':'last_sync'}
+    SQL = f'SELECT TOP 1 {t[table]} FROM dbo.vx_{table} WHERE {t[table]} <= GETDATE() '
+    return db.fetchone(SQL)[0]
+
+
+
 def reset(tables=None, practice=True):
-    from API.scheduling import everyhour
-    everyhour.pause = True
-    print(arrow.now().format('YYYY-MM-DD HH:mm:ss'))
-    import time
-    start = time.perf_counter()
-    print('Updating practices')
-    if practice:
-        API().practices()
-    if not tables:
-        tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-              'patient_referrals')
-    for t in tables:
-        print(t)
-        API().load_tmp_file(t, reload=True)
-    print(f'IT TOOK: {time.perf_counter() - start}')
-    everyhour.pause = False
+    error = ''
+    try:
+        from API.scheduling import everyhour
+        everyhour.pause = True
+        print(arrow.now().format('YYYY-MM-DD HH:mm:ss'))
+        import time
+        start = time.perf_counter()
+        print('Updating practices')
+        if practice:
+            try:
+                API().practices()
+            except:
+                error = traceback.format_stack()
+            log(mode='practices', error=error)
+            error = ''
+        if not tables:
+            tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+                  'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+                  'patient_referrals')
+        for t in tables:
+            print(t)
+            API().load_tmp_file(t, reload=True)
+        print(f'IT TOOK: {time.perf_counter() - start}')
+        everyhour.pause = False
+    except:
+        error = traceback.format_stack()
+    log(mode='full', error=str(error))
     return tables
 
 def reset_table(tablename):
@@ -348,33 +365,46 @@ def reset_table(tablename):
     return
 
 def scheduled(interval):
-    from API.scheduling import everyhour
-    everyhour.pause = True
-    import time
-    start = time.perf_counter()
-    x = arrow.now().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
-    print('Updating practices...')
-    API().practices()
-    print(x)
-    tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-    'patient_recall', 'operatory', 'procedure_codes', 'image_metadata','clinic','referral_sources','patient_referrals')
+    error = ''
     try:
+        from API.scheduling import everyhour
+        everyhour.pause = True
+        import time
+        start = time.perf_counter()
+        x = arrow.now().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+        print('Updating practices...')
+        API().practices()
+        print(x)
+        tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+        'patient_recall', 'operatory', 'procedure_codes', 'image_metadata','clinic','referral_sources','patient_referrals')
         for t in tables:
-            print(t)
-            v = API()
-            v.load_sync_files(t, start=x)
+            try:
+                print(t)
+                v = API()
+                v.load_sync_files(t, start=x)
+            except:
+                error = traceback.format_stack()
+        print(f'IT TOOK: {time.perf_counter() - start}')
+        everyhour.pause = False
     except:
-        pass
-    print(f'IT TOOK: {time.perf_counter() - start}')
-    everyhour.pause = False
+        error = traceback.format_stack()
+    log(mode='practices', error=error)
     return
+
+def log(mode=None, error=''):
+    if mode:
+        SQL = f'UPDATE dbo.vx_log SET last_sync=GETDATE(), error=%s WHERE [mode] = %s'
+        db.execute(SQL, error, mode)
+    SQL = 'SELECT * FROM dbo.vx_log'
+    return db.fetchall(SQL)
+
 
 if __name__=='__main__':
     os.chdir('../../')
     # reset(tables=('appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
     #           'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
     #           'patient_referrals'), practice=False)
-    API().practices()
+    log(mode='practices', error='')
 
 
 
