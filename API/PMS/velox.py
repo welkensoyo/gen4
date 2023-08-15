@@ -353,6 +353,8 @@ def scheduled(interval):
     import time
     start = time.perf_counter()
     x = arrow.now().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+    print('Updating practices...')
+    API().practices()
     print(x)
     tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
     'patient_recall', 'operatory', 'procedure_codes', 'image_metadata','clinic','referral_sources','patient_referrals')
@@ -372,7 +374,7 @@ if __name__=='__main__':
     # reset(tables=('appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
     #           'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
     #           'patient_referrals'), practice=False)
-    scheduled(72)
+    API().practices()
 
 
 

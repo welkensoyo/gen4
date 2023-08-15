@@ -85,12 +85,10 @@ class API:
         return report.meta or {}
 
     def hello(self):
-        if self.option =='test':
-            return 'TEST'
         if self.mode == 'post':
             return {'hello':'world'}
         if self.mode =='get':
-            return 'hello'
+            return arrow.now().format('YYYY-MM-DD HH:mm')
 
     def azuser(self):
         import API.toolkits.azure as a
