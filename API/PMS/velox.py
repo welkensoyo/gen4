@@ -68,41 +68,46 @@ class API:
     def ledger(self): return self.datastream('ledger')
 
     def practices(self):
-        txt = ''
-        tablename = 'practices'
-        self.url = f"{self.pre_url}/private/practices"
-        x = j.dc(self.transmit(self.url))
-        cols = list(x['practices'][0].keys())
-        for col in cols:
-            if col == 'id':
-                txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
-                    (id bigint, '''
-            elif '_id' in col:
-                txt += f'{col} varchar(255),'
-            elif col in ('duration', 'status', 'tx_status'):
-                txt += f'{col} INT,'
-            elif col in ('amount', 'cost', 'co_pay'):
-                txt += f'{col} DECIMAL(19, 4),'
-            elif col in ('',):
-                txt += f'{col} DECIMAL(19, 4),'
-            elif 'date' in col:
-                txt += f'{col} DATETIME2,'
-            elif col in ('dob','last_sync'):
-                txt += f'{col} DATETIME2,'
-            else:
-                txt += f'{str(col)} varchar(255),'
+        error = ''
+        try:
+            txt = ''
+            tablename = 'practices'
+            self.url = f"{self.pre_url}/private/practices"
+            x = j.dc(self.transmit(self.url))
+            cols = list(x['practices'][0].keys())
+            for col in cols:
+                if col == 'id':
+                    txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
+                        (id bigint, '''
+                elif '_id' in col:
+                    txt += f'{col} varchar(255),'
+                elif col in ('duration', 'status', 'tx_status'):
+                    txt += f'{col} INT,'
+                elif col in ('amount', 'cost', 'co_pay'):
+                    txt += f'{col} DECIMAL(19, 4),'
+                elif col in ('',):
+                    txt += f'{col} DECIMAL(19, 4),'
+                elif 'date' in col:
+                    txt += f'{col} DATETIME2,'
+                elif col in ('dob','last_sync'):
+                    txt += f'{col} DATETIME2,'
+                else:
+                    txt += f'{str(col)} varchar(255),'
 
-        txt = txt[:-1] + f''');'''
-        db.execute(f''' DROP TABLE {self.prefix}{tablename}; ''')
-        db.execute(txt)
-        db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
-        vars = '%s,'*len(cols)
-        PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
-        for p in x['practices']:
-            row = []
-            for c in cols:
-                row.append(str(p[c]))
-            db.execute(PSQL, *row)
+            txt = txt[:-1] + f''');'''
+            db.execute(f''' DROP TABLE {self.prefix}{tablename}; ''')
+            db.execute(txt)
+            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
+            vars = '%s,'*len(cols)
+            PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
+            for p in x['practices']:
+                row = []
+                for c in cols:
+                    row.append(str(p[c]))
+                db.execute(PSQL, *row)
+        except:
+            error = traceback.format_stack()
+        log(mode='practices', error=error)
         return self
 
 
@@ -335,12 +340,7 @@ def reset(tables=None, practice=True):
         start = time.perf_counter()
         print('Updating practices')
         if practice:
-            try:
-                API().practices()
-            except:
-                error = traceback.format_stack()
-            log(mode='practices', error=error)
-            error = ''
+            API().practices()
         if not tables:
             tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
                   'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
