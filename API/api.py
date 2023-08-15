@@ -126,7 +126,7 @@ class API:
             spawn(velox.scheduled, self.pl.get('hour') or '24')
             return 'Running...'
         elif self.option in ('lastupdated','log'):
-            return velox.get_log()
+            return velox.log()
         elif self.option =='pause':
             everyhour.pause = True
         elif self.option =='resume':
