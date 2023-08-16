@@ -107,7 +107,7 @@ class API:
                 db.execute(PSQL, *row)
         except:
             error = traceback.format_stack()
-        log(mode='practices', error=error)
+        log(mode='practices', error=str(error))
         return self
 
 
@@ -385,10 +385,10 @@ def scheduled(interval):
             except:
                 error = traceback.format_stack()
         print(f'IT TOOK: {time.perf_counter() - start}')
-        everyhour.pause = False
     except:
         error = traceback.format_stack()
     log(mode='practices', error=error)
+    everyhour.pause = False
     return
 
 def log(mode=None, error=''):
