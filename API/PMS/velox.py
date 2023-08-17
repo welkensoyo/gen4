@@ -387,7 +387,7 @@ def scheduled(interval):
         print(f'IT TOOK: {time.perf_counter() - start}')
     except:
         error = traceback.format_stack()
-    log(mode='practices', error=error)
+    log(mode='sync', error=error)
     everyhour.pause = False
     return
 
