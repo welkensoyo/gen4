@@ -2,9 +2,12 @@
 # velox.reset_table('ledger')
 # velox.reset_table('treatments')
 #
-import arrow
+import traceback
+x ={}
 
-if arrow.now().format('HH') >= '05':
-    print('True')
-    import API.PMS.velox as v
-    v.scheduled(24)
+try:
+    y = x['test']
+except:
+    e = traceback.format_exc()
+
+print(e)

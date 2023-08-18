@@ -106,7 +106,7 @@ class API:
                     row.append(str(p[c]))
                 db.execute(PSQL, *row)
         except:
-            error = traceback.format_stack()
+            error = traceback.format_exc()
         log(mode='practices', error=str(error))
         return self
 
@@ -350,7 +350,7 @@ def reset(tables=None, practice=True):
             API().load_tmp_file(t, reload=True)
         print(f'IT TOOK: {time.perf_counter() - start}')
     except:
-        error = traceback.format_stack()
+        error = traceback.format_exc()
     log(mode='full', error=str(error))
     everyhour.pause = False
     return tables
@@ -383,10 +383,10 @@ def scheduled(interval):
                 v = API()
                 v.load_sync_files(t, start=x)
             except:
-                error = traceback.format_stack()
+                error = traceback.format_exc()
         print(f'IT TOOK: {time.perf_counter() - start}')
     except:
-        error = traceback.format_stack()
+        error = traceback.format_exc()
     log(mode='sync', error=error)
     everyhour.pause = False
     return
