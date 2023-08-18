@@ -349,10 +349,10 @@ def reset(tables=None, practice=True):
             print(t)
             API().load_tmp_file(t, reload=True)
         print(f'IT TOOK: {time.perf_counter() - start}')
-        everyhour.pause = False
     except:
         error = traceback.format_stack()
     log(mode='full', error=str(error))
+    everyhour.pause = False
     return tables
 
 def reset_table(tablename):
