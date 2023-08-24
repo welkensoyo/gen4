@@ -42,7 +42,6 @@ class API:
         self.pids = [x[0] for x in pids]
         return self
 
-
     def authorization(self):
         self.url = self.pre_url+'/public/auth'
         meta = {
@@ -66,6 +65,7 @@ class API:
     def appointments(self): return self.datastream('appointments')
     def treatments(self): return self.datastream('treatments')
     def ledger(self): return self.datastream('ledger')
+
 
     def practices(self):
         error = ''
@@ -187,7 +187,10 @@ class API:
                                 l = list(i.values())
                                 ia(l[0])
                                 l = [cleanup(_) for _ in l]
-                                l.insert(1, pid)
+                                if int(pid) == 1400:
+                                    l.insert(1, 1486)
+                                else:
+                                    l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete:
                                 print(f'UPDATED {len(ids_to_delete)}')
@@ -247,7 +250,10 @@ class API:
                                 l = list(i.values())
                                 ia(l[0])
                                 l = [cleanup(_) for _ in l]
-                                l.insert(1, pid)
+                                if int(pid) == 1400:
+                                    l.insert(1, 1486)
+                                else:
+                                    l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete and not reload:
                                 print(f'UPDATED {len(ids_to_delete)}')
@@ -323,12 +329,26 @@ class API:
             traceback.print_exc()
         return self
 
+
+def correct_ids():
+    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
+        UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
+        UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
+        
+        UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
+        UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
+        UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
+        
+        UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+        UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+        UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
+    spawn(db.execute, SQL)
+    return
+
 def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
     SQL = f'SELECT TOP 1 {t[table]} FROM dbo.vx_{table} WHERE {t[table]} <= GETDATE() '
     return db.fetchone(SQL)[0]
-
-
 
 def reset(tables=None, practice=True):
     error = ''
@@ -349,6 +369,7 @@ def reset(tables=None, practice=True):
             print(t)
             API().load_tmp_file(t, reload=True)
         print(f'IT TOOK: {time.perf_counter() - start}')
+        correct_ids()
     except:
         error = traceback.format_exc()
     log(mode='full', error=str(error))
@@ -361,6 +382,7 @@ def reset_table(tablename):
     print('Updating practices')
     API().practices()
     API().load_tmp_file(tablename, reload=True)
+    correct_ids()
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
@@ -385,6 +407,7 @@ def scheduled(interval):
             except:
                 error = traceback.format_exc()
         print(f'IT TOOK: {time.perf_counter() - start}')
+        correct_ids()
     except:
         error = traceback.format_exc()
     log(mode='sync', error=error)
