@@ -433,8 +433,8 @@ def scheduled(interval):
                 v.load_sync_files(t, start=x)
             except:
                 error = traceback.format_exc()
-        print(f'IT TOOK: {time.perf_counter() - start}')
         correct_ids_local()
+        print(f'IT TOOK: {time.perf_counter() - start}')
     except:
         error = traceback.format_exc()
     log(mode='sync', error=error)
