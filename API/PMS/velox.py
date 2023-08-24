@@ -194,8 +194,7 @@ class API:
                                 cw.writerow(l)
                             if ids_to_delete:
                                 print(f'UPDATED {len(ids_to_delete)}')
-                                db.execute(
-                                    f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
+                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', pid)
                     self.load_bcp_db()
         except:
             traceback.print_exc()
@@ -335,32 +334,38 @@ class API:
 def correct_ids():
     print("Correcting IDs")
     SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
-        UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
-        UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
-        
-        UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
-        UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
-        UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
-        
-        UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-        UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-        UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
+UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
+UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
+UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438';
+
+UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436';
+
+UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
     spawn(db.execute, SQL)
     return
 
 
 def correct_ids_local():
     SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
-        UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
-        UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
+UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
+UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
+UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438';
 
-        UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
-        UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
-        UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436';
 
-        UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-        UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-        UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
+UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
     db.execute(SQL)
     return
 
