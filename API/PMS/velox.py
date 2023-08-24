@@ -257,7 +257,7 @@ class API:
                                 cw.writerow(l)
                             if ids_to_delete and not reload:
                                 print(f'UPDATED {len(ids_to_delete)}')
-                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids_to_delete))}); ''')
+                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', pid)
         except:
             traceback.print_exc()
             sleep(10)
@@ -325,12 +325,15 @@ class API:
                 txt = txt[:-1]+f''');'''
                 db.execute(txt)
                 db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (practice_id, id) with ignore_dup_key; ''')
+                # if tablename in ('ledger', 'treatments'):
+                #     db.execute(f'''CREATE INDEX ix_{tablename}_id ON {self.prefix}{tablename}  (id); ''')
         except:
             traceback.print_exc()
         return self
 
 
 def correct_ids():
+    print("Correcting IDs")
     SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
         UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
         UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
@@ -344,6 +347,23 @@ def correct_ids():
         UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
     spawn(db.execute, SQL)
     return
+
+
+def correct_ids_local():
+    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
+        UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
+        UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
+
+        UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
+        UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
+        UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
+
+        UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+        UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+        UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
+    db.execute(SQL)
+    return
+
 
 def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
