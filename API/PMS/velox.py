@@ -324,8 +324,10 @@ class API:
                 txt = txt[:-1]+f''');'''
                 db.execute(txt)
                 db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (practice_id, id) with ignore_dup_key; ''')
-                # if tablename in ('ledger', 'treatments'):
-                #     db.execute(f'''CREATE INDEX ix_{tablename}_id ON {self.prefix}{tablename}  (id); ''')
+                if tablename in ('ledger', 'treatments', 'appointments'):
+                    db.execute(f'''CREATE INDEX ix_{tablename}_clinic_id ON {self.prefix}{tablename}  (clinic_id); ''')
+                if tablename == 'clinic':
+                    db.execute(f'''CREATE INDEX ix_{tablename}_clinic_id ON {self.prefix}{tablename}  (id); ''')
         except:
             traceback.print_exc()
         return self
@@ -333,15 +335,15 @@ class API:
 
 def correct_ids():
     print("Correcting IDs")
-    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
-UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
-UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
-UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438';
+    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
+UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
+UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
+UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
 
-UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
-UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
-UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
-UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';
+UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';
+UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';;
+UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';;
 
 UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
 UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
@@ -353,15 +355,15 @@ UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic
 
 def correct_ids_local():
     print("Correcting IDs")
-    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
-UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
-UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
-UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438';
+    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
+UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
+UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
+UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42';
 
-UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436';
-UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436';
-UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436';
-UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436';
+UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';
+UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';
+UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';;
+UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50';;
 
 UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
 UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
