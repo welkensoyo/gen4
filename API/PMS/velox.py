@@ -352,6 +352,7 @@ UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic
 
 
 def correct_ids_local():
+    print("Correcting IDs")
     SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438';
 UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438';
 UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438';
@@ -407,7 +408,7 @@ def reset_table(tablename):
     print('Updating practices')
     API().practices()
     API().load_tmp_file(tablename, reload=True)
-    correct_ids()
+    correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
@@ -432,7 +433,7 @@ def scheduled(interval):
             except:
                 error = traceback.format_exc()
         print(f'IT TOOK: {time.perf_counter() - start}')
-        correct_ids()
+        correct_ids_local()
     except:
         error = traceback.format_exc()
     log(mode='sync', error=error)
