@@ -188,7 +188,7 @@ class API:
                                 ia(l[0])
                                 l = [cleanup(_) for _ in l]
                                 if int(pid) == 1400:
-                                    l.insert(1, 1486)
+                                    l.insert(1, str(1486))
                                 else:
                                     l.insert(1, pid)
                                 cw.writerow(l)
@@ -250,7 +250,7 @@ class API:
                                 ia(l[0])
                                 l = [cleanup(_) for _ in l]
                                 if int(pid) == 1400:
-                                    l.insert(1, 1486)
+                                    l.insert(1, str(1486))
                                 else:
                                     l.insert(1, pid)
                                 cw.writerow(l)
