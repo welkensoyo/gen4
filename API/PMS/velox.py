@@ -379,8 +379,8 @@ def last_updated(table='ledger'):
 
 def reset(tables=None, practice=True):
     error = ''
+    from API.scheduling import everyhour
     try:
-        from API.scheduling import everyhour
         everyhour.pause = True
         print(arrow.now().format('YYYY-MM-DD HH:mm:ss'))
         import time
@@ -399,7 +399,7 @@ def reset(tables=None, practice=True):
         correct_ids()
     except:
         error = traceback.format_exc()
-    log(mode='full', error=str(error))
+    spawn(log, mode='full', error=str(error))
     everyhour.pause = False
     return tables
 
@@ -415,8 +415,8 @@ def reset_table(tablename):
 
 def scheduled(interval):
     error = ''
+    from API.scheduling import everyhour
     try:
-        from API.scheduling import everyhour
         everyhour.pause = True
         import time
         start = time.perf_counter()
@@ -437,16 +437,19 @@ def scheduled(interval):
         print(f'IT TOOK: {time.perf_counter() - start}')
     except:
         error = traceback.format_exc()
-    log(mode='sync', error=error)
     everyhour.pause = False
+    spawn(log, mode='sync', error=error)
     return
 
 def log(mode=None, error=''):
-    if mode:
-        SQL = f'UPDATE dbo.vx_log SET last_sync=GETDATE(), error=%s WHERE [mode] = %s'
-        db.execute(SQL, error, mode)
-    SQL = 'SELECT * FROM dbo.vx_log'
-    return db.fetchall(SQL)
+    try:
+        if mode:
+            SQL = f'UPDATE dbo.vx_log SET last_sync=GETDATE(), error=%s WHERE [mode] = %s'
+            return db.execute(SQL, error, mode)
+        SQL = 'SELECT * FROM dbo.vx_log'
+        return db.fetchall(SQL)
+    except:
+        traceback.print_exc()
 
 
 if __name__=='__main__':
