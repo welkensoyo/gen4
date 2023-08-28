@@ -262,7 +262,7 @@ class API:
             sleep(10)
             self.load_tmp_file(table, start)
         if reload:
-            self.create_table(self.table)
+            self.create_table()
         self.load_bcp_db()
 
     def delete_updated(self,ids):
@@ -296,16 +296,17 @@ class API:
         os.remove(self.filename)
         return self
 
-    def create_table(self, tablename):
+    def create_table(self):
         try:
             # print(tablename)
-            x = j.dc(self.datastream(tablename))
+            x = j.dc(self.datastream(self.table))
             txt = ''
             if 'properties' in x:
+                print('DROPPING TABLE')
                 self.drop_table()
                 for col in x['properties']['fields']['items']['enum']:
                     if col == 'id':
-                        txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
+                        txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{self.table}' and xtype='U') CREATE TABLE {self.prefix}{self.table} 
                         (id bigint, practice_id int, '''
                     elif '_id' in col:
                         txt += f'{col} varchar(255),'
@@ -323,9 +324,9 @@ class API:
                         txt += f'{col} varchar(255),'
                 txt = txt[:-1]+f''');'''
                 db.execute(txt)
-                db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (practice_id, id) with ignore_dup_key; ''')
-                if tablename in ('ledger', 'treatments', 'appointments'):
-                    db.execute(f'''CREATE INDEX ix_{tablename}_clinic_id ON {self.prefix}{tablename}  (clinic_id); ''')
+                db.execute(f'''CREATE UNIQUE INDEX ux_{self.table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
+                if self.table in ('ledger', 'treatments', 'appointments'):
+                    db.execute(f'''CREATE INDEX ix_{self.table}_clinic_id ON {self.prefix}{self.table}  (clinic_id); ''')
         except:
             traceback.print_exc()
         return self
