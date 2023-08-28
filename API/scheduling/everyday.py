@@ -6,5 +6,6 @@ def midnight():
     velox.reset()
 
 def set():
-    schedule.every().day.at("00:00").do(midnight)
+    pass
+    # schedule.every().day.at("00:00").do(midnight)
 
