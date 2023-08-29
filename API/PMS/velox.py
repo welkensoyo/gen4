@@ -334,19 +334,17 @@ class API:
 
 def correct_ids():
     print("Correcting IDs")
-    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-
-UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-
+    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
     spawn(db.execute, SQL)
     return
@@ -354,20 +352,18 @@ UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic
 
 def correct_ids_local():
     print("Correcting IDs")
-    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND clinic_id != '42' or clinic_id IS NULL;
-
-UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND clinic_id != '50' or clinic_id IS NULL;
-
+    SQL = '''UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';;
+UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
+UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
+UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
 '''
     db.execute(SQL)
     return
@@ -456,7 +452,7 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     os.chdir('../../')
     x = API()
-    x.load_tmp_file('appointments', reload=True)
+    x.load_tmp_file('patients', reload=True)
 
 
 
