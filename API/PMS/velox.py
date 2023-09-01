@@ -8,6 +8,7 @@ import urllib3
 import API.njson as j
 import ndjson
 import API.dbms as db
+import API.dbpyodbc as dbpy
 import arrow
 import traceback
 import csv
@@ -436,17 +437,18 @@ def scheduled(interval):
         print(f'IT TOOK: {time.perf_counter() - start}')
     except:
         error = traceback.format_exc()
-    everyhour.pause = False
     spawn(log, mode='sync', error=error)
+    everyhour.pause = False
     return
 
 def log(mode=None, error=''):
     try:
         if mode:
-            SQL = f'UPDATE dbo.vx_log SET last_sync=GETDATE(), error=%s WHERE [mode] = %s'
-            return db.execute(SQL, error, mode)
-        SQL = 'SELECT * FROM dbo.vx_log'
-        return db.fetchall(SQL)
+            SQL = f'UPDATE dbo.vx_log SET last_sync=GETDATE(), error=? WHERE [mode] = ?'
+            return dbpy.execute(SQL, error, mode)
+        SQL = 'SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log'
+        return [tuple(x) for x in dbpy.fetchall(SQL)]
+
     except:
         traceback.print_exc()
 

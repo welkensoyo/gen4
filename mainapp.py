@@ -6,6 +6,7 @@ import API.api as a
 import API.njson as json
 from API.render import Render
 from bottle import Bottle, get, request, response, abort, route, error, template, redirect, static_file, hook
+import API.PMS.velox as v
 
 mainappRoute = Bottle()
 
@@ -29,7 +30,10 @@ def hcheck():
 
 @get('/')
 def _index():
-    return 'API'
+    from API.scheduling import everyhour
+    query = json.merge_dicts(dict(request.forms), dict(request.query.decode()))
+    apikey = query.get('apikey')
+    return template('templates/api.tpl', log=v.log(), apikey=apikey, pause=everyhour.pause)
 
 @route('/api/<command>', method=['GET','POST'])
 @route('/api/<command>/<option>', method=['GET','POST'])
