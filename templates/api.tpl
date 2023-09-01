@@ -2,7 +2,7 @@
 %columns = 'job', 'last run', 'error'
 <div class="container">
     <h5 class="text-muted">&nbsp;&nbsp;&nbsp;Gen4 API</h5>
-    <input id="hours" placeholder="Hours to Sync" value=""></input><a class="btn btn-primary" id="syncb" onclick="sync()">Sync Velox</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="btn btn-primary float-end" id="resetb" onclick="reset()">Full Reset</a>
+    <input id="hours" placeholder="Hours to Sync" value=""></input><a class="btn btn-primary" id="syncb" onclick="sync()">Sync Velox</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="btn btn-primary float-middle" id="pauseb" onclick="unpause()">Un Pause</a><a class="btn btn-primary float-end" id="resetb" onclick="reset()">Full Reset</a>
 <table id="tablex" class="display table-sm table-striped" width="100%"></table>
     <br>
     <br>
@@ -72,7 +72,7 @@ async function apiCall(url = "", data = {}) {
 function sync() {
     const response = confirm("Are you sure you want to do that?");
         if (response) {
-            document.getElementById('message').innerHTML = "<strong>Sync in progress...</strong> "
+            document.getElementById('message').innerHTML = "<strong>Message: </strong>Sync in progress... "
             hours = document.getElementById('hours').value
             apiCall('/api/velox/sync?apikey={{apikey}}&hours='+hours, {}).then((data) => {
                     document.getElementById('message').innerHTML = "<strong>Response:</strong> "+data
@@ -89,7 +89,7 @@ function reset() {
     };
     const response = confirm("Are you sure you want to do that?");
         if (response) {
-                document.getElementById('message').innerHTML = "<strong>Reset in progress...</strong> "
+                document.getElementById('message').innerHTML = "<strong>Message: </strong>Reset in progress..."
                 apiCall('/api/velox/reset?apikey={{apikey}}', {}).then((data) => {
                     document.getElementById('message').innerHTML = "<strong>Response:</strong> "+data
                 });
@@ -99,7 +99,23 @@ function reset() {
         }
 
 }
+function unpause() {
+    const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+    };
+    const response = confirm("Are you sure you want to do that?");
+        if (response) {
+                document.getElementById('message').innerHTML = "<strong>Message: </strong>Resume scheduler..."
+                apiCall('/api/velox/resume?apikey={{apikey}}', {}).then((data) => {
+                    document.getElementById('message').innerHTML = "<strong>Response:</strong> "+data
+                });
+        } else {
+            // add code if the user pressed the Cancel button
+            console.log("Canceled");
+        }
 
+}
 $(document).ready(function() {
     } );
 </script>
