@@ -29,6 +29,7 @@ def hcheck():
     return 'Running....'
 
 @get('/')
+@get('/api')
 def _index():
     from API.scheduling import everyhour
     query = json.merge_dicts(dict(request.forms), dict(request.query.decode()))
