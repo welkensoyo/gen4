@@ -51,6 +51,7 @@ if __name__ == '__main__':
     try:
         f = open('/home/gen4it/velox.log', 'w')
         redirect_stdout(f)
+        print('Print Redirected')
     except:
         pass
     if config.compress:
