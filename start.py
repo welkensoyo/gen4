@@ -13,6 +13,7 @@ from beaker.middleware import SessionMiddleware
 from mainapp import mainappRoute
 from whitenoise import WhiteNoise, compress
 from pathlib import Path
+from contextlib import redirect_stdout
 
 debug = False
 staticfolder = 'static'
@@ -47,6 +48,11 @@ def check_compress():
     print('File optimization completed')
 
 if __name__ == '__main__':
+    try:
+        f = open('/home/gen4it/velox.log', 'w')
+        redirect_stdout(f)
+    except:
+        pass
     if config.compress:
         spawn(check_compress)
     print(Path.home())
