@@ -48,34 +48,33 @@ def check_compress():
     print('File optimization completed')
 
 if __name__ == '__main__':
-    try:
-        f = open('/home/gen4it/velox.log', 'w')
-        redirect_stdout(f)
-        print('Print Redirected')
-    except:
-        pass
-    if config.compress:
-        spawn(check_compress)
-    print(Path.home())
-    print('Started...')
-    botapp = bottle.app()
-    for Route in (mainappRoute,):
-        botapp.merge(Route)
-    botapp = SessionMiddleware(botapp, config.beakerconfig)
-    botapp = WhiteNoise(botapp)
-    botapp.add_files(staticfolder, prefix='static/')
-    # botapp.add_files('dist', prefix='dist/')
-    scheduler.start()
-    server = WSGIServer(("0.0.0.0", 80), botapp , handler_class=WebSocketHandler)
+    from contextlib import redirect_stdout
 
-    def shutdown():
-        print('Shutting down ...')
-        server.stop(timeout=5)
-        exit(signal.SIGTERM)
+    with open('/home/gen4it/velox.log', 'w') as f:
+        with redirect_stdout(f):
+            print('Print Redirected to log /home/gen4it/velox.log`')
+            if config.compress:
+                spawn(check_compress)
+            print(Path.home())
+            print('Started...')
+            botapp = bottle.app()
+            for Route in (mainappRoute,):
+                botapp.merge(Route)
+            botapp = SessionMiddleware(botapp, config.beakerconfig)
+            botapp = WhiteNoise(botapp)
+            botapp.add_files(staticfolder, prefix='static/')
+            # botapp.add_files('dist', prefix='dist/')
+            scheduler.start()
+            server = WSGIServer(("0.0.0.0", 80), botapp , handler_class=WebSocketHandler)
 
-    sig(signal.SIGTERM, shutdown)
-    sig(signal.SIGINT, shutdown)
-    server.serve_forever()
+            def shutdown():
+                print('Shutting down ...')
+                server.stop(timeout=5)
+                exit(signal.SIGTERM)
+
+            sig(signal.SIGTERM, shutdown)
+            sig(signal.SIGINT, shutdown)
+            server.serve_forever()
 
 
 ''' #Service on Linux to run python
