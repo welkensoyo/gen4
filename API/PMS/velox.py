@@ -444,9 +444,9 @@ def scheduled(interval):
 def log(mode=None, error=''):
     try:
         if mode:
-            SQL = f'UPDATE dbo.vx_log SET last_sync=GETDATE(), error=? WHERE [mode] = ?'
+            SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE() AT TIME ZONE 'Central Standard Time', error=? WHERE [mode] = ?"
             return dbpy.execute(SQL, error, mode)
-        SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120) AT TIME ZONE 'Central Standard Time', error FROM dbo.vx_log"
+        SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log"
         return [tuple(x) for x in dbpy.fetchall(SQL)]
 
     except:
