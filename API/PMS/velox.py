@@ -455,8 +455,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    x = API()
-    x.load_tmp_file('patients', reload=True)
+    scheduled(24)
 
 
 
