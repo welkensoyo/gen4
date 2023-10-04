@@ -409,7 +409,7 @@ def reset_table(tablename):
     print('Updating practices')
     API().practices()
     x = API()
-    x.pids.remove(1401)
+    x.pids = [1606,]
     x.load_tmp_file(tablename, reload=False)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -419,9 +419,10 @@ def reload_table(tablename):
     import time
     start = time.perf_counter()
     print('Updating practices')
-    API().practices()
+    # API().practices()
     x = API()
-    x.pids.remove(1401)
+    # 1411, 1412, 1413, 1414, 1425, 1426, 1429, 1430, 1431, 1432, 1433, 1434, 1435, 1436, 1438, 1439, 1440, 1441, 1442, 1443, 1444, 1446, 1447, 1448
+    x.pids = [1400, 1401, 1402, 1403, 1404, 1405, 1406, 1407, 1408, 1409, 1410]
     x.load_sync_files(tablename, reload=False)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -469,7 +470,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    reset_table('treatments')
+    reload_table('treatments')
 
 
 
