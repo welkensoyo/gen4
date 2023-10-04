@@ -415,6 +415,18 @@ def reset_table(tablename):
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
+def reload_table(tablename):
+    import time
+    start = time.perf_counter()
+    print('Updating practices')
+    API().practices()
+    x = API()
+    x.pids.remove(1401)
+    x.load_sync_files(tablename, reload=False)
+    correct_ids_local()
+    print(f'IT TOOK: {time.perf_counter() - start}')
+    return
+
 def scheduled(interval):
     error = ''
     from API.scheduling import everyhour
