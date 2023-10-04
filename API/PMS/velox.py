@@ -162,6 +162,7 @@ class API:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
             for pid in self.pids:
+                upload_pid = pid
                 sleep(0)
                 print(pid)
                 meta = {
@@ -190,12 +191,13 @@ class API:
                                 l = [cleanup(_) for _ in l]
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
+                                    upload_pid = '1486'
                                 else:
                                     l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete:
                                 print(f'UPDATED {len(ids_to_delete)}')
-                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', pid)
+                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                     self.load_bcp_db()
         except:
             traceback.print_exc()
@@ -419,10 +421,10 @@ def reload_table(tablename):
     import time
     start = time.perf_counter()
     print('Updating practices')
-    # API().practices()
+    API().practices()
     x = API()
-    # 1411, 1412, 1413, 1414, 1425, 1426, 1429, 1430, 1431, 1432, 1433, 1434, 1435, 1436, 1438, 1439, 1440, 1441, 1442, 1443, 1444, 1446, 1447, 1448
-    x.pids = [1400, 1401, 1402, 1403, 1404, 1405, 1406, 1407, 1408, 1409, 1410]
+    # # 1411, 1412, 1413, 1414, 1425, 1426, 1429, 1430, 1431, 1432, 1433, 1434, 1435, 1436, 1438, 1439, 1440, 1441, 1442, 1443, 1444, 1446, 1447, 1448
+    x.pids = [1401, 1402, 1403, 1404, 1405, 1406, 1407, 1408, 1409, 1410, 1411, 1412, 1413, 1414, 1425, 1426, 1429, 1430, 1431, 1432, 1433, 1434, 1435, 1436, 1438, 1439, 1440, 1441, 1442, 1443, 1444, 1446, 1447, 1448, 1449, 1450, 1453, 1454, 1455, 1464, 1485, 1486, 1489, 1498, 1588, 1589, 1605, 1616, 1617, 1634, 1706, 1707, 1708, 1709, 1710, 1714, 1717, 1718, 1720, 1734, 1761, 1798]
     x.load_sync_files(tablename, reload=False)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
