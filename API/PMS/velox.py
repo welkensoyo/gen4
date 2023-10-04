@@ -289,6 +289,7 @@ class API:
             os.makedirs(p)
 
     def drop_table(self):
+        print(f'DROPPING TABLE {self.prefix}{self.table}')
         PSQL = f''' DROP TABLE {self.prefix}{self.table}; '''
         db.execute(PSQL)
         return self
@@ -303,7 +304,6 @@ class API:
             x = j.dc(self.datastream(self.table))
             txt = ''
             if 'properties' in x:
-                print('DROPPING TABLE')
                 self.drop_table()
                 for col in x['properties']['fields']['items']['enum']:
                     if col == 'id':
@@ -408,7 +408,9 @@ def reset_table(tablename):
     start = time.perf_counter()
     print('Updating practices')
     API().practices()
-    API().load_tmp_file(tablename, reload=True)
+    x = API()
+    x.pids.remove(1401)
+    x.load_tmp_file(tablename, reload=False)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
@@ -455,7 +457,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    scheduled(24)
+    reset_table('treatments')
 
 
 
