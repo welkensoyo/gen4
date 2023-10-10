@@ -13,7 +13,9 @@ import arrow
 import traceback
 import csv
 
-
+full_tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+                  'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+                  'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth')
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
@@ -325,6 +327,8 @@ class API:
                         txt += f'{col} DATETIME2,'
                     elif col in ('dob',):
                         txt += f'{col} DATETIME2,'
+                    elif col in ('note', 'notes'):
+                        txt += f'{col} varchar(max),'
                     else:
                         txt += f'{col} varchar(255),'
                 txt = txt[:-1]+f''');'''
@@ -393,9 +397,7 @@ def reset(tables=None, practice=True):
         if practice:
             API().practices()
         if not tables:
-            tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-                  'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-                  'patient_referrals')
+            tables = full_tables
         for t in tables:
             print(t)
             API().load_tmp_file(t, reload=True)
@@ -421,12 +423,13 @@ def reset_table(tablename):
 def refresh_table(tablename, pids=None):
     import time
     start = time.perf_counter()
-    print('Updating practices')
-    API().practices()
+    # print('Updating practices')
+    # API().practices()
     x = API()
     if pids:
         pids = pids.split(',')
         x.pids = pids
+    print(x.pids)
     x.load_sync_files(tablename, reload=False)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -447,7 +450,7 @@ def refresh(pids=None):
             x.pids = pids
         tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
                   'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-                  'patient_referrals')
+                  'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth')
         for table in tables:
             x.load_sync_files(table)
         correct_ids_local()
@@ -500,8 +503,8 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    refresh()
-
+    refresh_table('providers', '1068')
+    # reset(tables=('clinical_notes',), practice=False)
 
 
 
