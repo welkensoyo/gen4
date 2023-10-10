@@ -90,7 +90,7 @@ function reset() {
     const response = confirm("Are you sure you want to do that?");
         if (response) {
                 document.getElementById('message').innerHTML = "<strong>Message: </strong>Reset in progress..."
-                apiCall('/api/velox/refresh?apikey={{apikey}}', {}).then((data) => {
+                apiCall('/api/velox/fullrefresh?apikey={{apikey}}', {}).then((data) => {
                     document.getElementById('message').innerHTML = "<strong>Response:</strong> "+data
                 });
         } else {

@@ -435,18 +435,23 @@ def refresh_table(tablename, pids=None):
 def refresh(pids=None):
     import time
     start = time.perf_counter()
-    print('Updating practices')
-    API().practices()
-    x = API()
-    if pids:
-        pids = pids.split(',')
-        x.pids = pids
-    tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-              'patient_referrals')
-    for table in tables:
-        x.load_sync_files(table)
-    correct_ids_local()
+    error = ''
+    try:
+        print('Updating practices')
+        API().practices()
+        x = API()
+        if pids:
+            pids = pids.split(',')
+            x.pids = pids
+        tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+                  'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+                  'patient_referrals')
+        for table in tables:
+            x.load_sync_files(table)
+        correct_ids_local()
+    except:
+        error = traceback.format_exc()
+    spawn(log, mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
@@ -492,7 +497,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    refresh_table('treatments')
+    refresh()
 
 
 
