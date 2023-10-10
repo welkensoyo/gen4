@@ -228,6 +228,7 @@ class API:
             with open(self.root+self.filename, 'w') as f:
                 cw = csv.writer(f, delimiter='|')
                 for pid in self.pids:
+                    upload_pid = pid
                     sleep(0)
                     print(pid)
                     meta = {
@@ -254,12 +255,13 @@ class API:
                                 l = [cleanup(_) for _ in l]
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
+                                    upload_pid = '1486'
                                 else:
                                     l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete and not reload:
                                 print(f'UPDATED {len(ids_to_delete)}')
-                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', pid)
+                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
         except:
             traceback.print_exc()
             sleep(10)
@@ -411,21 +413,39 @@ def reset_table(tablename):
     print('Updating practices')
     API().practices()
     x = API()
-    x.pids = [1606,]
-    x.load_tmp_file(tablename, reload=False)
+    x.load_tmp_file(tablename, reload=True)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
-def reload_table(tablename):
+def refresh_table(tablename, pids=None):
     import time
     start = time.perf_counter()
     print('Updating practices')
     API().practices()
     x = API()
-    # # 1411, 1412, 1413, 1414, 1425, 1426, 1429, 1430, 1431, 1432, 1433, 1434, 1435, 1436, 1438, 1439, 1440, 1441, 1442, 1443, 1444, 1446, 1447, 1448
-    x.pids = [1605, 1616, 1617, 1634, 1706, 1707, 1708, 1709, 1710, 1714, 1717, 1718, 1720, 1734, 1761, 1798]
+    if pids:
+        pids = pids.split(',')
+        x.pids = pids
     x.load_sync_files(tablename, reload=False)
+    correct_ids_local()
+    print(f'IT TOOK: {time.perf_counter() - start}')
+    return
+
+def refresh(pids=None):
+    import time
+    start = time.perf_counter()
+    print('Updating practices')
+    API().practices()
+    x = API()
+    if pids:
+        pids = pids.split(',')
+        x.pids = pids
+    tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+              'patient_referrals')
+    for table in tables:
+        x.load_sync_files(table)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
@@ -472,7 +492,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    reload_table('treatments')
+    refresh_table('treatments')
 
 
 

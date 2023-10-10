@@ -131,8 +131,10 @@ class API:
             everyhour.pause = True
         elif self.option =='resume':
             everyhour.pause = False
-        elif self.option == 'treatments':
-            velox.reset_table('treatments')
+        elif self.option == 'fullrefresh':
+            velox.refresh(self.pl.get('pids'))
+        elif self.option == 'refresh':
+            velox.refresh_table(self.option2, self.pl.get('pids'))
         return str(everyhour.pause)
 
 
