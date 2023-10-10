@@ -434,8 +434,10 @@ def refresh_table(tablename, pids=None):
 
 def refresh(pids=None):
     import time
+    from API.scheduling import everyhour
     start = time.perf_counter()
     error = ''
+    everyhour.pause = True
     try:
         print('Updating practices')
         API().practices()
@@ -451,6 +453,7 @@ def refresh(pids=None):
         correct_ids_local()
     except:
         error = traceback.format_exc()
+    everyhour.pause = False
     spawn(log, mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
