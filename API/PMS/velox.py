@@ -448,9 +448,7 @@ def refresh(pids=None):
         if pids:
             pids = pids.split(',')
             x.pids = pids
-        tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-                  'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-                  'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth')
+        tables = full_tables
         for table in tables:
             x.load_sync_files(table)
         correct_ids_local()
@@ -472,8 +470,7 @@ def scheduled(interval):
         print('Updating practices...')
         API().practices()
         print(x)
-        tables = ( 'ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-        'patient_recall', 'operatory', 'procedure_codes', 'image_metadata','clinic','referral_sources','patient_referrals')
+        tables = full_tables
         for t in tables:
             try:
                 print(t)
@@ -503,7 +500,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    refresh_table('providers', '1068')
+    refresh_table('treatments', '1020,1068,1606')
     # reset(tables=('clinical_notes',), practice=False)
 
 
