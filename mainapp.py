@@ -32,9 +32,10 @@ def hcheck():
 @get('/api')
 def _index():
     from API.scheduling import everyhour
+    from API.PMS.velox import full_tables
     query = json.merge_dicts(dict(request.forms), dict(request.query.decode()))
     apikey = query.get('apikey')
-    return template('templates/api.tpl', log=v.log(), apikey=apikey, pause=everyhour.pause)
+    return template('templates/api.tpl', log=v.log(), apikey=apikey, pause=everyhour.pause, full_tables=full_tables)
 
 @route('/api/<command>', method=['GET','POST'])
 @route('/api/<command>/<option>', method=['GET','POST'])

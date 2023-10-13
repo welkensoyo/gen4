@@ -422,17 +422,23 @@ def reset_table(tablename):
 
 def refresh_table(tablename, pids=None):
     import time
+    from API.scheduling import everyhour
+    everyhour.pause = True
     start = time.perf_counter()
     # print('Updating practices')
     # API().practices()
-    x = API()
-    if pids:
-        pids = pids.split(',')
-        x.pids = pids
-    print(x.pids)
-    x.load_sync_files(tablename, reload=False)
-    correct_ids_local()
+    try:
+        x = API()
+        if pids:
+            pids = pids.split(',')
+            x.pids = pids
+        # print(x.pids)
+        x.load_sync_files(tablename, reload=False)
+        correct_ids_local()
+    except:
+        error = traceback.print_exc()
     print(f'IT TOOK: {time.perf_counter() - start}')
+    everyhour.pause = False
     return
 
 def refresh(pids=None):
@@ -500,7 +506,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    refresh_table('treatments', '1020,1068,1606')
+    refresh_table('treatments', '1448')
     # reset(tables=('clinical_notes',), practice=False)
 
 

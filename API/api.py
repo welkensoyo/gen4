@@ -134,7 +134,13 @@ class API:
         elif self.option == 'fullrefresh':
             spawn(velox.refresh, self.pl.get('pids'))
         elif self.option == 'refresh':
-            spawn(velox.refresh_table, self.option2, self.pl.get('pids'))
+            table = self.option2
+            pids = self.pl.get('pids')
+            if not pids:
+                return False
+            if pids == 'ALL':
+                pids = None
+            spawn(velox.refresh_table, table, pids)
         return str(everyhour.pause)
 
 
