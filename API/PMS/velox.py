@@ -432,7 +432,7 @@ def refresh_table(tablename, pids=None):
         if pids:
             pids = pids.split(',')
             x.pids = pids
-        # print(x.pids)
+        print(x.pids)
         x.load_sync_files(tablename, reload=False)
         correct_ids_local()
     except:
