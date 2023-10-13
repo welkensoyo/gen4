@@ -421,6 +421,8 @@ def reset_table(tablename):
     return
 
 def refresh_table(tablename, pids=None):
+    print(tablename)
+    print(pids)
     import time
     from API.scheduling import everyhour
     everyhour.pause = True

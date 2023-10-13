@@ -136,9 +136,9 @@ function refresh() {
     const response = confirm("Are you sure you want to do that?");
         if (response) {
                 document.getElementById('message').innerHTML = "<strong>Message: </strong>Refresh in progress..."
-                table = document.getElementById('tables').value
+                table = document.getElementById('table').value
                 pids = document.getElementById('pids').value
-                apiCall('/api/velox/refresh/'+table+'?apikey={{apikey}}?pids='+pids, {}).then((data) => {
+                apiCall('/api/velox/refresh/'+table+'?apikey={{apikey}}&pids='+pids, {}).then((data) => {
                     document.getElementById('message').innerHTML = "<strong>Response:</strong> "+data
                 });
         } else {
