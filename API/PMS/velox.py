@@ -40,7 +40,7 @@ class API:
             self.get_pids()
 
     def get_pids(self):
-        SQL = f'SELECT id FROM {self.prefix}practices'
+        SQL = f'SELECT id FROM {self.prefix}practices_gen4'
         pids = db.fetchall(SQL)
         self.pids = [x[0] for x in pids]
         return self
@@ -508,8 +508,8 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    refresh()
-    # refresh_table('treatments', 'ALL')
+    refresh(pids='1406')
+    refresh_table('treatments', None)
     # reset(tables=('clinical_notes',), practice=False)
 
 

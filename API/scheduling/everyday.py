@@ -3,9 +3,8 @@ import schedule
 
 def midnight():
     from API.PMS import velox
-    velox.reset()
+    velox.refresh()
 
 def set():
-    pass
-    # schedule.every().day.at("00:00").do(midnight)
+    schedule.every().day.at("00:00").do(midnight)
 

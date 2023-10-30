@@ -8,5 +8,6 @@ def v_refresh():
     velox.refresh()
 
 def set():
-    schedule.every().saturday.at("00:00").do(v_reset)
-    schedule.every().saturday.at("03:00").do(v_refresh)
+    pass
+    # schedule.every().saturday.at("00:00").do(v_reset)
+    # schedule.every().saturday.at("03:00").do(v_refresh)
