@@ -508,7 +508,7 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    refresh(pids='1406')
+    # refresh(pids='1406')
     refresh_table('treatments', None)
     # reset(tables=('clinical_notes',), practice=False)
 
