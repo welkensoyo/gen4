@@ -13,13 +13,14 @@ import arrow
 import traceback
 import csv
 
-full_tables = ('ledger', 'treatments', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-                  'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-                  'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth')
+full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth')
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
 
+current = 'No Process Running...'
 class API:
     def __init__(self, qa=False, pids=None):
 
@@ -43,6 +44,7 @@ class API:
         SQL = f'SELECT id FROM {self.prefix}practices_gen4'
         pids = db.fetchall(SQL)
         self.pids = [x[0] for x in pids]
+        self.pids.sort()
         return self
 
     def authorization(self):
@@ -164,9 +166,11 @@ class API:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
             for pid in self.pids:
+                global current
                 upload_pid = pid
                 sleep(0)
                 print(pid)
+                current = f'Syncing {pid} - {table}...'
                 meta = {
                     "practice": {
                         "id": int(pid),
@@ -357,6 +361,8 @@ UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND (
 UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
 UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
     spawn(db.execute, SQL)
+    global current
+    current = 'No sync in progress...'
     return
 
 
@@ -465,6 +471,8 @@ def refresh(pids=None):
     everyhour.pause = False
     spawn(log, mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
+    global current
+    current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
 
 def scheduled(interval):
@@ -488,6 +496,8 @@ def scheduled(interval):
                 error = traceback.format_exc()
         correct_ids_local()
         print(f'IT TOOK: {time.perf_counter() - start}')
+        global current
+        current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     except:
         error = traceback.format_exc()
     spawn(log, mode='sync', error=error)

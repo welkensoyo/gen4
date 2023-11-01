@@ -34,7 +34,7 @@
 <table id="tablex" class="display table-sm table-striped" width="100%"></table>
     <br>
     <br>
-    <div id="message"><strong>Message: </strong> {{'Sync in progress...' if pause else 'No job currently running...' }}</div>
+    <div id="message"><strong>Message: </strong> {{ current }}</div>
 </div>
 <script>
 var logurl = '/api/velox/log?apikey={{apikey}}';
