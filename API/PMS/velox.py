@@ -488,10 +488,7 @@ def scheduled(interval):
         print('Updating practices...')
         API().practices()
         print(x)
-        tables = (
-        'treatments', 'ledger', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-        'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-        'patient_referrals', 'perio_charts', 'perio_tooth')
+        tables = ('treatments', 'ledger', 'appointments', 'patients')
         for t in tables:
             try:
                 print(t)
