@@ -447,6 +447,8 @@ def refresh_table(tablename, pids=None):
         error = traceback.print_exc()
     print(f'IT TOOK: {time.perf_counter() - start}')
     everyhour.pause = False
+    global current
+    current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
 
 def refresh(pids=None):
