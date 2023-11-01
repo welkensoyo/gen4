@@ -6,5 +6,5 @@ def nightly():
     velox.refresh()
 
 def set():
-    schedule.every().day.at("04:00").do(nightly)
+    schedule.every().day.at("02:00").do(nightly)
 

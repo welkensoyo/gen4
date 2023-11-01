@@ -483,10 +483,13 @@ def scheduled(interval):
         import time
         start = time.perf_counter()
         x = arrow.now().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
-        # print('Updating practices...')
-        # API().practices()
+        print('Updating practices...')
+        API().practices()
         print(x)
-        tables = full_tables
+        tables = (
+        'treatments', 'ledger', 'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
+        'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
+        'patient_referrals', 'perio_charts', 'perio_tooth')
         for t in tables:
             try:
                 print(t)
