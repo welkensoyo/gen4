@@ -525,10 +525,10 @@ def scheduled(interval):
 def log(mode=None, error=''):
     try:
         if mode:
-            SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE() AT TIME ZONE 'Central Standard Time', error=? WHERE [mode] = ?"
+            SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE(), error=? WHERE [mode] = ?"
             return dbpy.execute(SQL, error, mode)
         SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log"
-        return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:ss:mm'), x[2]) for x in dbpy.fetchall(SQL)]
+        return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), x[2]) for x in dbpy.fetchall(SQL)]
 
     except:
         traceback.print_exc()
