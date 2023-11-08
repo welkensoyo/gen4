@@ -49,31 +49,31 @@ def check_compress():
 
 if __name__ == '__main__':
     from contextlib import redirect_stdout
-    print('Print Redirected to log /home/gen4it/velox.log')
-    # with open('/opt/gen4/velox.log', 'w') as f:
-    #     with redirect_stdout(f):
-    if config.compress:
-        spawn(check_compress)
-    print(Path.home())
-    print('Started...')
-    botapp = bottle.app()
-    for Route in (mainappRoute,):
-        botapp.merge(Route)
-    botapp = SessionMiddleware(botapp, config.beakerconfig)
-    botapp = WhiteNoise(botapp)
-    botapp.add_files(staticfolder, prefix='static/')
-    # botapp.add_files('dist', prefix='dist/')
-    scheduler.start()
-    server = WSGIServer(("0.0.0.0", 8080), botapp , handler_class=WebSocketHandler)
+    print('Print Redirected to log /opt/gen4/velox.log')
+    with open('/opt/gen4/velox.log', 'w') as f:
+        with redirect_stdout(f):
+            if config.compress:
+                spawn(check_compress)
+            print(Path.home())
+            print('Started...')
+            botapp = bottle.app()
+            for Route in (mainappRoute,):
+                botapp.merge(Route)
+            botapp = SessionMiddleware(botapp, config.beakerconfig)
+            botapp = WhiteNoise(botapp)
+            botapp.add_files(staticfolder, prefix='static/')
+            # botapp.add_files('dist', prefix='dist/')
+            scheduler.start()
+            server = WSGIServer(("0.0.0.0", 8080), botapp , handler_class=WebSocketHandler)
 
-    def shutdown():
-        print('Shutting down ...')
-        server.stop(timeout=5)
-        exit(signal.SIGTERM)
+            def shutdown():
+                print('Shutting down ...')
+                server.stop(timeout=5)
+                exit(signal.SIGTERM)
 
-    sig(signal.SIGTERM, shutdown)
-    sig(signal.SIGINT, shutdown)
-    server.serve_forever()
+            sig(signal.SIGTERM, shutdown)
+            sig(signal.SIGINT, shutdown)
+            server.serve_forever()
 
 
 ''' #Service on Linux to run python

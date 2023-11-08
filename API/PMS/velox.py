@@ -552,7 +552,7 @@ if __name__=='__main__':
     os.chdir('../../')
     v = API()
     scheduled(interval=1)
-    scheduled(interval=1)
+    # scheduled(interval=1)
 
     # # refresh(pids='1406')
     # refresh_table('treatments', None)
