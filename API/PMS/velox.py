@@ -50,6 +50,20 @@ class API:
         self.pids.sort()
         return self
 
+    def last_sync(self, time=None):
+        global last_time_sync
+        if time:
+            with open('last_sync.txt', 'w') as f:
+                f.write(time)
+                last_time_sync = time
+        if not last_time_sync:
+            with open('last_sync.txt', 'r') as f:
+                last_time_sync = f.read()
+        print(last_time_sync)
+        return last_time_sync
+
+
+
     def authorization(self):
         self.url = self.pre_url+'/public/auth'
         meta = {
@@ -135,8 +149,8 @@ class API:
                 with upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False) as each:
                     each.auto_close = False
                     next = each.headers['X-Next-Timestamp']
-                    if not current_sync or last_time_sync > next:
-                        last_time_sync = next
+                    if not current_sync:
+                        self.last_sync(next)
                         current_sync = True
                     yield each.data
             except:
@@ -525,7 +539,7 @@ def scheduled(interval):
 def log(mode=None, error=''):
     try:
         if mode:
-            SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE(), error=? WHERE [mode] = ?"
+            SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE() AT TIME ZONE 'Central Standard Time', error=? WHERE [mode] = ?"
             return dbpy.execute(SQL, error, mode)
         SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log"
         return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), x[2]) for x in dbpy.fetchall(SQL)]
@@ -537,6 +551,7 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     os.chdir('../../')
     v = API()
+    scheduled(interval=1)
     scheduled(interval=1)
 
     # # refresh(pids='1406')
