@@ -7,7 +7,7 @@ pause = False
 def velox_sync():
     if not pause:
         import API.PMS.velox as v
-        v.scheduled(12)
+        v.scheduled(2)
 
 def set():
-    schedule.every().hour.do(velox_sync)
+    schedule.every(15).minutes.do(velox_sync)

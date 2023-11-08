@@ -537,7 +537,7 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     os.chdir('../../')
     v = API()
-    v.pids=('1406',)
+    scheduled(interval=1)
 
     # # refresh(pids='1406')
     # refresh_table('treatments', None)
