@@ -1,10 +1,10 @@
 from gevent import spawn
 import schedule
-import API.PMS.velox as v
 
 pause = False
 
 def velox_sync():
+    import API.PMS.velox as v
     if not pause:
         v.scheduled(2)
 
