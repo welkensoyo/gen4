@@ -514,7 +514,7 @@ def scheduled(interval):
         correct_ids_local()
         print(f'IT TOOK: {time.perf_counter() - start}')
         global current
-        current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
+        current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
     except:
         error = traceback.format_exc()
     spawn(log, mode='sync', error=error)

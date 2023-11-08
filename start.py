@@ -49,7 +49,7 @@ def check_compress():
 
 if __name__ == '__main__':
     from contextlib import redirect_stdout
-    print('Print Redirected to log /home/gen4it/velox.log`')
+    print('Print Redirected to log /home/gen4it/velox.log')
     with open('/home/gen4it/velox.log', 'w') as f:
         with redirect_stdout(f):
             if config.compress:
