@@ -21,6 +21,9 @@ CA = 'keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
 
 current = 'No Process Running...'
+last_time_sync = None
+current_sync = False
+
 class API:
     def __init__(self, qa=False, pids=None):
 
@@ -122,14 +125,22 @@ class API:
         return self.transmit(self.url)
 
     def stream(self, url, meta=None):
+        global last_time_sync
+        global current_sync
         self.headers['Accept'] = 'application/x-ndjson'
         self.headers['Content-Type'] = 'application/json'
         if meta:
             meta = j.jc(meta)
             try:
-                for each in upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False):
-                    yield each
+                with upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False) as each:
+                    each.auto_close = False
+                    next = each.headers['X-Next-Timestamp']
+                    if not current_sync or last_time_sync > next:
+                        last_time_sync = next
+                        current_sync = True
+                    yield each.data
             except:
+                traceback.print_exc()
                 yield {}
 
     def transmit(self, url, meta=None, mode='GET'):
@@ -396,7 +407,7 @@ def reset(tables=None, practice=True):
     from API.scheduling import everyhour
     try:
         everyhour.pause = True
-        print(arrow.now().format('YYYY-MM-DD HH:mm:ss'))
+        print(arrow.get().format('YYYY-MM-DD HH:mm:ss'))
         import time
         start = time.perf_counter()
         print('Updating practices')
@@ -478,13 +489,17 @@ def refresh(pids=None):
     return
 
 def scheduled(interval):
+    global current_sync
     error = ''
     from API.scheduling import everyhour
     try:
         everyhour.pause = True
         import time
         start = time.perf_counter()
-        x = arrow.now().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+        if not last_time_sync:
+            x = arrow.get().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+        else:
+            x = last_time_sync
         print('Updating practices...')
         API().practices()
         print(x)
@@ -504,6 +519,7 @@ def scheduled(interval):
         error = traceback.format_exc()
     spawn(log, mode='sync', error=error)
     everyhour.pause = False
+    current_sync = False
     return
 
 def log(mode=None, error=''):
@@ -520,10 +536,14 @@ def log(mode=None, error=''):
 
 if __name__=='__main__':
     os.chdir('../../')
-    # refresh(pids='1406')
-    refresh_table('treatments', None)
-    # reset(tables=('clinical_notes',), practice=False)
+    v = API()
+    v.pids=('1406',)
 
+    # # refresh(pids='1406')
+    # refresh_table('treatments', None)
+    # reset(tables=('clinical_notes',), practice=False)
+    # print(arrow.now())
+    # print(arrow.get())
 
 
 
