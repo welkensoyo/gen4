@@ -154,7 +154,7 @@ class API:
                         current_sync = True
                     yield each.data
             except:
-                traceback.print_exc()
+                # traceback.print_exc()
                 yield {}
 
     def transmit(self, url, meta=None, mode='GET'):
@@ -231,7 +231,7 @@ class API:
                                 db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                     self.load_bcp_db()
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
             sleep(10)
             self.load_sync_files(table, start)
 
@@ -294,7 +294,7 @@ class API:
                                 print(f'UPDATED {len(ids_to_delete)}')
                                 db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
             sleep(10)
             self.load_tmp_file(table, start)
         if reload:
@@ -366,7 +366,8 @@ class API:
                 if self.table in ('ledger', 'treatments', 'appointments'):
                     db.execute(f'''CREATE INDEX ix_{self.table}_clinic_id ON {self.prefix}{self.table}  (clinic_id); ''')
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
+            pass
         return self
 
 
@@ -545,8 +546,8 @@ def log(mode=None, error=''):
         return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), x[2]) for x in dbpy.fetchall(SQL)]
 
     except:
-        traceback.print_exc()
-
+        # traceback.print_exc()
+        pass
 
 if __name__=='__main__':
     os.chdir('../../')
