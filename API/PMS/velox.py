@@ -148,7 +148,7 @@ class API:
             try:
                 with upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False) as each:
                     each.auto_close = False
-                    next = each.headers['X-Next-Timestamp']
+                    next = each.headers.get('X-Next-Timestamp') or last_time_sync or "2001-01-01T00:00:00.000Z"
                     if not current_sync:
                         self.last_sync(next)
                         current_sync = True

@@ -50,8 +50,10 @@ def check_compress():
 if __name__ == '__main__':
     from contextlib import redirect_stdout
     import os
-    print('Print Redirected to log /opt/gen4/velox.log')
-    with open(os.devnull, 'w') as f:
+    # location = os.devnull
+    location = '/opt/gen4/velox.log'
+    print(f'Print Redirected to log {location}')
+    with open(location, 'w') as f:
         with redirect_stdout(f):
             if config.compress:
                 spawn(check_compress)
