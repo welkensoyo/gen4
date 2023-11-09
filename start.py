@@ -51,7 +51,8 @@ if __name__ == '__main__':
     from contextlib import redirect_stdout
     import os
     # location = os.devnull
-    location = '/opt/gen4/velox.log'
+    # location = '/opt/gen4/velox.log'
+    location = '/home/gen4it/velox.log'
     print(f'Print Redirected to log {location}')
     with open(location, 'w') as f:
         with redirect_stdout(f):
