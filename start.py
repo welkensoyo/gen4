@@ -52,32 +52,32 @@ if __name__ == '__main__':
     import os
     # location = os.devnull
     # location = '/opt/gen4/velox.log'
-    location = '/home/gen4it/velox.log'
-    print(f'Print Redirected to log {location}')
-    with open(location, 'w') as f:
-        with redirect_stdout(f):
-            if config.compress:
-                spawn(check_compress)
-            print(Path.home())
-            print('Started...')
-            botapp = bottle.app()
-            for Route in (mainappRoute,):
-                botapp.merge(Route)
-            botapp = SessionMiddleware(botapp, config.beakerconfig)
-            botapp = WhiteNoise(botapp)
-            botapp.add_files(staticfolder, prefix='static/')
-            # botapp.add_files('dist', prefix='dist/')
-            scheduler.start()
-            server = WSGIServer(("0.0.0.0", 80), botapp , handler_class=WebSocketHandler)
+    # location = '/home/gen4it/velox.log'
+    # print(f'Print Redirected to log {location}')
+    # with open(location, 'w') as f:
+    with redirect_stdout(None):
+        if config.compress:
+            spawn(check_compress)
+        print(Path.home())
+        print('Started...')
+        botapp = bottle.app()
+        for Route in (mainappRoute,):
+            botapp.merge(Route)
+        botapp = SessionMiddleware(botapp, config.beakerconfig)
+        botapp = WhiteNoise(botapp)
+        botapp.add_files(staticfolder, prefix='static/')
+        # botapp.add_files('dist', prefix='dist/')
+        scheduler.start()
+        server = WSGIServer(("0.0.0.0", 80), botapp , handler_class=WebSocketHandler)
 
-            def shutdown():
-                print('Shutting down ...')
-                server.stop(timeout=5)
-                exit(signal.SIGTERM)
+        def shutdown():
+            print('Shutting down ...')
+            server.stop(timeout=5)
+            exit(signal.SIGTERM)
 
-            sig(signal.SIGTERM, shutdown)
-            sig(signal.SIGINT, shutdown)
-            server.serve_forever()
+        sig(signal.SIGTERM, shutdown)
+        sig(signal.SIGINT, shutdown)
+        server.serve_forever()
 
 
 ''' #Service on Linux to run python
