@@ -15,7 +15,7 @@ import csv
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth')
+              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan')
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
@@ -87,6 +87,7 @@ class API:
     def appointments(self): return self.datastream('appointments')
     def treatments(self): return self.datastream('treatments')
     def ledger(self): return self.datastream('ledger')
+    def treatment_plan(self): return self.datastream('treatment_plan')
 
 
     def practices(self):
@@ -154,7 +155,7 @@ class API:
                         current_sync = True
                     yield each.data
             except:
-                # traceback.print_exc()
+                # traceback.
                 yield {}
 
     def transmit(self, url, meta=None, mode='GET'):
@@ -176,7 +177,7 @@ class API:
         print('LOAD TMP FILE')
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
-        def cleanup(val):
+        def cleanup(val, index=None):
             val = str(val)
             if val == 'None':
                 return ''
@@ -214,12 +215,13 @@ class API:
                     with open(self.root + self.filename, 'w') as f:
                         cw = csv.writer(f, delimiter='|')
                         for p in x:
+
                             ids_to_delete = []
                             ia = ids_to_delete.append
                             for i in p.get('data', []):
                                 l = list(i.values())
                                 ia(l[0])
-                                l = [cleanup(_) for _ in l]
+                                l = [cleanup(_,i) for i,_ in enumerate(l)]
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
                                     upload_pid = '1486'
@@ -518,12 +520,11 @@ def scheduled(interval):
         print('Updating practices...')
         API().practices()
         print(x)
-        tables = ('treatments', 'ledger', 'appointments', 'patients')
+        tables = ('treatments', 'ledger', 'appointments', 'patients', 'treatment_plan')
         for t in tables:
             try:
                 print(t)
-                v = API()
-                v.load_sync_files(t, start=x)
+                API().load_sync_files(t, start=x)
             except:
                 error = traceback.format_exc()
         correct_ids_local()
@@ -552,7 +553,9 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     os.chdir('../../')
     v = API()
-    scheduled(interval=1)
+    v.table = 'treatment_plan'
+    v.load_sync_files('treatment_plan')
+    # scheduled(interval=1)
     # scheduled(interval=1)
 
     # # refresh(pids='1406')
@@ -560,6 +563,7 @@ if __name__=='__main__':
     # reset(tables=('clinical_notes',), practice=False)
     # print(arrow.now())
     # print(arrow.get())
+
 
 
 
