@@ -40,11 +40,12 @@ class API:
         }
         self.authorization()
         self.pids = pids
+        self.missing = []
         if not self.pids:
             self.get_pids()
 
     def get_pids(self):
-        SQL = f'SELECT id FROM {self.prefix}practices_gen4'
+        SQL = f'SELECT id FROM {self.prefix}practices'
         pids = db.fetchall(SQL)
         self.pids = [x[0] for x in pids]
         self.pids.sort()
@@ -59,9 +60,8 @@ class API:
         if not last_time_sync:
             with open('last_sync.txt', 'r') as f:
                 last_time_sync = f.read()
-        print(last_time_sync)
+        # print(last_time_sync)
         return last_time_sync
-
 
 
     def authorization(self):
@@ -177,7 +177,7 @@ class API:
         print('LOAD TMP FILE')
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
-        def cleanup(val, index=None):
+        def cleanup(val):
             val = str(val)
             if val == 'None':
                 return ''
@@ -209,19 +209,21 @@ class API:
                 for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
                     try:
                         x = ndjson.loads(s)
+                        # print(x)
                         sleep(0)
                     except:
                         break
-                    with open(self.root + self.filename, 'w') as f:
+                    with open(self.root + self.filename, 'w', newline='') as f:
                         cw = csv.writer(f, delimiter='|')
                         for p in x:
-
                             ids_to_delete = []
                             ia = ids_to_delete.append
                             for i in p.get('data', []):
+                                # if i.get('plan_id'):
+                                #     print(i)
                                 l = list(i.values())
                                 ia(l[0])
-                                l = [cleanup(_,i) for i,_ in enumerate(l)]
+                                l = [cleanup(_) for _ in l]
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
                                     upload_pid = '1486'
@@ -229,8 +231,10 @@ class API:
                                     l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete:
-                                print(f'UPDATED {len(ids_to_delete)}')
+                                print(f'UPDATING {len(ids_to_delete)}')
                                 db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
+                            else:
+                                self.missing.append(pid)
                     self.load_bcp_db()
         except:
             # traceback.print_exc()
@@ -241,6 +245,7 @@ class API:
 
     def load_tmp_file(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
+        print(start)
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
         def cleanup(val):
@@ -258,7 +263,7 @@ class API:
         try:
             print(f'Creating Folder {self.root+self.filename}')
             self.create_folder()
-            with open(self.root+self.filename, 'w') as f:
+            with open(self.root+self.filename, 'w', newline='') as f:
                 cw = csv.writer(f, delimiter='|')
                 for pid in self.pids:
                     upload_pid = pid
@@ -293,8 +298,10 @@ class API:
                                     l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete and not reload:
-                                print(f'UPDATED {len(ids_to_delete)}')
+                                print(f'UPDATING {len(ids_to_delete)}')
                                 db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
+                            elif not ids_to_delete:
+                                self.missing.append(pid)
         except:
             # traceback.print_exc()
             sleep(10)
@@ -350,6 +357,8 @@ class API:
                         txt += f'{col} varchar(255),'
                     elif col in ('duration', 'status', 'tx_status'):
                         txt += f'{col} INT,'
+                    elif col in ('plan_id',):
+                        txt += f'{col} BIGINT,'
                     elif col in ('amount','cost','co_pay'):
                         txt += f'{col} DECIMAL(19, 4),'
                     elif col in ('',):
@@ -422,6 +431,7 @@ def last_updated(table='ledger'):
 def reset(tables=None, practice=True):
     error = ''
     from API.scheduling import everyhour
+    missing = {}
     try:
         everyhour.pause = True
         print(arrow.get().format('YYYY-MM-DD HH:mm:ss'))
@@ -434,11 +444,15 @@ def reset(tables=None, practice=True):
             tables = full_tables
         for t in tables:
             print(t)
-            API().load_tmp_file(t, reload=True)
+            v = API()
+            v.load_tmp_file(t, reload=True)
+            missing[t] = v.missing
         print(f'IT TOOK: {time.perf_counter() - start}')
         correct_ids()
     except:
         error = traceback.format_exc()
+    if not error and missing:
+        error = j.jc(missing)
     spawn(log, mode='full', error=str(error))
     everyhour.pause = False
     return tables
@@ -446,10 +460,11 @@ def reset(tables=None, practice=True):
 def reset_table(tablename):
     import time
     start = time.perf_counter()
-    print('Updating practices')
-    API().practices()
+    # print('Updating practices')
+    # API().practices()
     x = API()
     x.load_tmp_file(tablename, reload=True)
+    print(x.missing)
     correct_ids_local()
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
@@ -468,7 +483,7 @@ def refresh_table(tablename, pids=None):
         if pids:
             pids = pids.split(',')
             x.pids = pids
-        print(x.pids)
+        # print(x.pids)
         x.load_sync_files(tablename, reload=False)
         correct_ids_local()
     except:
@@ -551,10 +566,14 @@ def log(mode=None, error=''):
         pass
 
 if __name__=='__main__':
+    from pprint import pprint
     os.chdir('../../')
-    v = API()
-    v.table = 'treatment_plan'
-    v.load_sync_files('treatment_plan')
+    refresh_table('treatments', '1381')
+    # v = API()
+    # v.table = 'treatments;
+    # v.create_table()
+    # v.load_bcp_db('treatments')
+    # pprint(j.dc(v.treatments()))
     # scheduled(interval=1)
     # scheduled(interval=1)
 
