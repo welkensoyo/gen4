@@ -214,7 +214,7 @@ class API:
                     except:
                         break
                     with open(self.root + self.filename, 'w', newline='') as f:
-                        cw = csv.writer(f, delimiter='|')
+                        cw = csv.writer(f, delimiter='|', lineterminator='\n')
                         for p in x:
                             ids_to_delete = []
                             ia = ids_to_delete.append
@@ -264,7 +264,7 @@ class API:
             print(f'Creating Folder {self.root+self.filename}')
             self.create_folder()
             with open(self.root+self.filename, 'w', newline='') as f:
-                cw = csv.writer(f, delimiter='|')
+                cw = csv.writer(f, delimiter='|', lineterminator='\n')
                 for pid in self.pids:
                     upload_pid = pid
                     sleep(0)
@@ -553,6 +553,26 @@ def scheduled(interval):
     current_sync = False
     return
 
+def treatmentsfix():
+    try:
+        import time
+        start = time.perf_counter()
+        x = '2023-11-01T00:00:00.000Z'
+        print(x)
+        tables = ('treatments',)
+        for t in tables:
+            try:
+                print(t)
+                API().load_sync_files(t, start=x)
+            except:
+                error = traceback.format_exc()
+        correct_ids_local()
+        print(f'IT TOOK: {time.perf_counter() - start}')
+        global current
+    except:
+        error = traceback.format_exc()
+    return
+
 def log(mode=None, error=''):
     try:
         if mode:
@@ -568,7 +588,7 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     from pprint import pprint
     os.chdir('../../')
-    refresh_table('treatments', '1381')
+    refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
     # v = API()
     # v.table = 'treatments;
     # v.create_table()
