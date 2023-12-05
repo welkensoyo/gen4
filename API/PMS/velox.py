@@ -15,7 +15,7 @@ import csv
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan')
+              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan', 'insurance_groups')
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
@@ -88,6 +88,7 @@ class API:
     def treatments(self): return self.datastream('treatments')
     def ledger(self): return self.datastream('ledger')
     def treatment_plan(self): return self.datastream('treatment_plan')
+    def insurance_groups(self): return self.datastream('insurance_groups')
 
 
     def practices(self):
@@ -535,7 +536,7 @@ def scheduled(interval):
         print('Updating practices...')
         API().practices()
         print(x)
-        tables = ('treatments', 'ledger', 'appointments', 'patients', 'treatment_plan')
+        tables = ('treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
         for t in tables:
             try:
                 print(t)
@@ -588,8 +589,10 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     from pprint import pprint
     os.chdir('../../')
-    refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
-    # v = API()
+    # scheduled(1)
+    # refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
+    v = API()
+    reset_table('providers')
     # v.table = 'treatments;
     # v.create_table()
     # v.load_bcp_db('treatments')
