@@ -12,6 +12,7 @@ import API.dbpyodbc as dbpy
 import arrow
 import traceback
 import csv
+import requests
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
@@ -90,6 +91,54 @@ class API:
     def treatment_plan(self): return self.datastream('treatment_plan')
     def insurance_groups(self): return self.datastream('insurance_groups')
 
+    def available_appointments(self, pids=None, days=5):
+        self.table = 'available_appointments'
+        self.filename = f'{self.prefix}{self.table}.csv'
+        result = []
+        if not pids:
+            pids = self.pids
+        elif isinstance(pids, (str, int)):
+            pids = [int(pids)]
+        count = 999
+        with open(self.root + self.filename, 'w', newline='') as f:
+            cw = csv.writer(f, delimiter='|', lineterminator='\n')
+            for pid in pids:
+                print(f'Appointments for {pid}')
+                # db.execute('DELETE FROM dbo.vx_available_appointments WHERE practice_id = %s',pid)
+                query = {
+                    'query':
+                        '''query ($practice_id: ID! $start_date: Date! $end_date: Date!) {
+          practice(id:$practice_id) { 
+            apptAvailability(start_date: $start_date, end_date:$end_date){
+             time_slot
+             operatory {
+              id
+              name
+              pms_id
+        }
+        }
+        }
+        }
+        ''',
+        'variables': {
+        'practice_id': pid,
+        'start_date': arrow.get().format('YYYY-MM-DD[T]00:00:00.000[Z]'),
+        'end_date': arrow.get().shift(days=int(days)).format('YYYY-MM-DD[T]00:00:00.000[Z]')
+                }}
+                appointments = self.graphql(query)
+                appointments = appointments['data']['practice']['apptAvailability']
+                for appointment in appointments:
+                    tslot = arrow.get(appointment['time_slot']).format('YYYY-MM-DD hh:mm:ss')
+                    for category in appointment.keys():
+                        if category == 'time_slot':
+                            continue
+                        for p in appointment[category]:
+                            count+=1
+                            cw.writerow((count, pid, category, tslot, p['id'], p['name'], p['pms_id']))
+                # print(result)
+        db.execute('DELETE FROM dbo.vx_available_appointments')
+        self.load_bcp_db()
+        return self
 
     def practices(self):
         error = ''
@@ -173,6 +222,11 @@ class API:
             return r.data.decode()
         except ValueError as exc:
             return False
+
+    def graphql(self, query):
+        url = f"{self.pre_url}/private/graphql"
+        r = requests.post(url, json=query, headers=self.headers,  verify=CA)
+        return j.dc(r.text)
 
     def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
@@ -358,7 +412,7 @@ class API:
                         txt += f'{col} varchar(255),'
                     elif col in ('duration', 'status', 'tx_status'):
                         txt += f'{col} INT,'
-                    elif col in ('plan_id',):
+                    elif col in ('plan_id', 'insurance_id', 'guarantor_id'):
                         txt += f'{col} BIGINT,'
                     elif col in ('amount','cost','co_pay'):
                         txt += f'{col} DECIMAL(19, 4),'
@@ -592,20 +646,8 @@ if __name__=='__main__':
     # scheduled(1)
     # refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
     v = API()
-    reset_table('providers')
-    # v.table = 'treatments;
-    # v.create_table()
-    # v.load_bcp_db('treatments')
-    # pprint(j.dc(v.treatments()))
-    # scheduled(interval=1)
-    # scheduled(interval=1)
-
-    # # refresh(pids='1406')
-    # refresh_table('treatments', None)
-    # reset(tables=('clinical_notes',), practice=False)
-    # print(arrow.now())
-    # print(arrow.get())
-
+    # reset_table('patients')
+    v.available_appointments()
 
 
 
