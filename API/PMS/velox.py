@@ -132,7 +132,7 @@ class API:
                     for category in appointment.keys():
                         if category == 'time_slot':
                             continue
-                        if 6 <= int(tslot.format('HH')) <= 20:
+                        if 6 <= int(tslot.format('HH')) < 20:
                             for p in appointment[category]:
                                 count+=1
                                 cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
