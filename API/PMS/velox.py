@@ -128,7 +128,7 @@ class API:
                 appointments = self.graphql(query)
                 appointments = appointments['data']['practice']['apptAvailability']
                 for appointment in appointments:
-                    print(appointment['time_slot'])
+                    # print(appointment['time_slot'])
                     tslot = arrow.get(appointment['time_slot']).format('YYYY-MM-DD HH:mm:ss')
                     for category in appointment.keys():
                         if category == 'time_slot':
