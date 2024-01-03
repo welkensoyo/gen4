@@ -94,7 +94,6 @@ class API:
     def available_appointments(self, pids=None, days=5):
         self.table = 'available_appointments'
         self.filename = f'{self.prefix}{self.table}.csv'
-        result = []
         if not pids:
             pids = self.pids
         elif isinstance(pids, (str, int)):
@@ -129,13 +128,14 @@ class API:
                 appointments = appointments['data']['practice']['apptAvailability']
                 for appointment in appointments:
                     # print(appointment['time_slot'])
-                    tslot = arrow.get(appointment['time_slot']).format('YYYY-MM-DD HH:mm:ss')
+                    tslot = arrow.get(appointment['time_slot'])
                     for category in appointment.keys():
                         if category == 'time_slot':
                             continue
-                        for p in appointment[category]:
-                            count+=1
-                            cw.writerow((count, pid, category, tslot, p['id'], p['name'], p['pms_id']))
+                        if 6 <= int(tslot.format('HH')) <= 20:
+                            for p in appointment[category]:
+                                count+=1
+                                cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
                 # print(result)
         db.execute('DELETE FROM dbo.vx_available_appointments')
         self.load_bcp_db()
