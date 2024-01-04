@@ -91,7 +91,7 @@ class API:
     def treatment_plan(self): return self.datastream('treatment_plan')
     def insurance_groups(self): return self.datastream('insurance_groups')
 
-    def available_appointments(self, pids=None, days=5):
+    def available_appointments(self, pids=None, days=7):
         self.table = 'available_appointments'
         self.filename = f'{self.prefix}{self.table}.csv'
         if not pids:
