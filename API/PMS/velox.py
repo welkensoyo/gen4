@@ -452,7 +452,27 @@ UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND (cl
 UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
 UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
 UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';'''
+UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+'''
+
+    spawn(db.execute, SQL)
+    changes = [(1379, 445),
+               (1019, 370),
+               (1020, 438),
+               (1068, 396),
+               (1397, 398),
+               (1398, 490),
+               (1399, 441),
+               (1406, 440),
+               (1407, 594),
+               (1414, 336),
+               (1486, 525),
+               (1588, 542),
+               (1606, 443)]
+    SQL = ''
+    for table in ('treatments', 'appointments', 'ledger'):
+        for change in changes:
+            SQL += f"UPDATE dbo.vx_{table} SET clinic_id = '{change[1]}' WHERE practice_id = '{change[0]}' AND (clinic_id != '42' or clinic_id IS NULL); "
     spawn(db.execute, SQL)
     global current
     current = 'No sync in progress...'
@@ -476,6 +496,26 @@ UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND (
 UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
 '''
     db.execute(SQL)
+    changes = [(1379,445),
+               (1019,370),
+               (1020,438),
+               (1068,396),
+               (1397,398),
+               (1398,490),
+               (1399,441),
+               (1406,440),
+               (1407,594),
+               (1414,336),
+               (1486,525),
+               (1588,542),
+               (1606,443)]
+    SQL = ''
+    for table in ('treatments', 'appointments', 'ledger'):
+        for change in changes:
+            SQL += f"UPDATE dbo.vx_{table} SET clinic_id = '{change[1]}' WHERE practice_id = '{change[0]}' AND (clinic_id != '42' or clinic_id IS NULL); "
+    db.execute(SQL)
+
+
     return
 
 
@@ -644,11 +684,12 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     from pprint import pprint
     os.chdir('../../')
-    # scheduled(1)
+    correct_ids_local()
     # refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
-    v = API()
+    # v = API()
+    # v.practices()
     # reset_table('patients')
-    v.available_appointments()
+    # v.available_appointments()
 
 
 
