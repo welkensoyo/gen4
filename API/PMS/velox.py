@@ -239,7 +239,7 @@ class API:
                 return ''
             try:
                 if val[10] == 'T' and val[19] == '.' and val[-1] == 'Z':
-                    val = arrow.get(val).format('YYYY-MM-DD hh:mm:ss')
+                    val = arrow.get(val).format('YYYY-MM-DD HH:mm:ss')
             except:
                 return val
             return val
@@ -310,7 +310,7 @@ class API:
                 return ''
             try:
                 if val[10]=='T' and val[19]=='.' and val[-1] =='Z':
-                    val = arrow.get(val).format('YYYY-MM-DD hh:mm:ss')
+                    val = arrow.get(val).format('YYYY-MM-DD HH:mm:ss')
             except:
                 return val
             return val
@@ -561,7 +561,7 @@ def reset_table(tablename):
     x = API()
     x.load_tmp_file(tablename, reload=True)
     print(x.missing)
-    correct_ids_local()
+    correct_ids()
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
@@ -638,7 +638,7 @@ def scheduled(interval):
                 API().load_sync_files(t, start=x)
             except:
                 error = traceback.format_exc()
-        correct_ids_local()
+        correct_ids()
         print(f'IT TOOK: {time.perf_counter() - start}')
         global current
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
@@ -684,7 +684,8 @@ def log(mode=None, error=''):
 if __name__=='__main__':
     from pprint import pprint
     os.chdir('../../')
-    correct_ids_local()
+    # correct_ids_local()
+    reset_table('appointments')
     # refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
     # v = API()
     # v.practices()
