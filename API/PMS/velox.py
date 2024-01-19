@@ -42,7 +42,7 @@ class API:
         self.authorization()
         self.pids = pids
         self.missing = []
-        if not self.pids:
+        if not self.pids or pids == 'ALL':
             self.get_pids()
 
     def get_pids(self):
@@ -377,7 +377,7 @@ class API:
         if not self.filename:
             self.filename = f'{self.prefix}{self.table}.csv'
         # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -q -c -t "," '
-        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 5000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
+        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
         # print(bcp)
         os.system(bcp)
         return self
@@ -685,6 +685,8 @@ if __name__=='__main__':
     from pprint import pprint
     os.chdir('../../')
     # correct_ids_local()
+    # refresh_table('appointments','2067,2068')
+    # refresh_table('ledger', '2067,2068')
     reset_table('appointments')
     # refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
     # v = API()
