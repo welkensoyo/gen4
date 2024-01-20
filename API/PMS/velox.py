@@ -14,9 +14,9 @@ import traceback
 import csv
 import requests
 
-full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers',
-              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources',
-              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan', 'insurance_groups')
+full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'insurance_claim',
+              'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
+              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
@@ -230,7 +230,7 @@ class API:
         return j.dc(r.text)
 
     def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
-        print('LOAD TMP FILE')
+        print('SYNC TMP FILE')
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
         def cleanup(val):
@@ -268,7 +268,8 @@ class API:
                         # print(x)
                         sleep(0)
                     except:
-                        break
+                        traceback.print_exc()
+                        continue
                     with open(self.root + self.filename, 'w', newline='') as f:
                         cw = csv.writer(f, delimiter='|', lineterminator='\n')
                         for p in x:
@@ -286,11 +287,15 @@ class API:
                                 else:
                                     l.insert(1, pid)
                                 cw.writerow(l)
-                            if ids_to_delete:
+                            if ids_to_delete and not reload:
                                 print(f'UPDATING {len(ids_to_delete)}')
                                 db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                             else:
                                 self.missing.append(pid)
+                    if reload:
+                        self.authorization()
+                        print(f'WIPING {upload_pid}')
+                        db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                     self.load_bcp_db()
         except:
             # traceback.print_exc()
@@ -364,7 +369,11 @@ class API:
             self.load_tmp_file(table, start)
         if reload:
             self.create_table()
+            self.authorization()
         self.load_bcp_db()
+        if self.missing:
+            self.pids = tuple(self.missing)
+            self.load_sync_files(table, start, reload=reload)
 
     def delete_updated(self,ids):
         SQL = f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids))}); '''
@@ -579,8 +588,7 @@ def refresh_table(tablename, pids=None):
         if pids:
             pids = pids.split(',')
             x.pids = pids
-        # print(x.pids)
-        x.load_sync_files(tablename, reload=False)
+        x.load_sync_files(tablename, reload=True)
         correct_ids_local()
     except:
         error = traceback.print_exc()
@@ -603,9 +611,8 @@ def refresh(pids=None):
         if pids:
             pids = pids.split(',')
             x.pids = pids
-        tables = full_tables
-        for table in tables:
-            x.load_sync_files(table)
+        for table in full_tables:
+            x.load_sync_files(table, reload=True)
         correct_ids_local()
     except:
         error = traceback.format_exc()
@@ -649,26 +656,6 @@ def scheduled(interval):
     current_sync = False
     return
 
-def treatmentsfix():
-    try:
-        import time
-        start = time.perf_counter()
-        x = '2023-11-01T00:00:00.000Z'
-        print(x)
-        tables = ('treatments',)
-        for t in tables:
-            try:
-                print(t)
-                API().load_sync_files(t, start=x)
-            except:
-                error = traceback.format_exc()
-        correct_ids_local()
-        print(f'IT TOOK: {time.perf_counter() - start}')
-        global current
-    except:
-        error = traceback.format_exc()
-    return
-
 def log(mode=None, error=''):
     try:
         if mode:
@@ -681,19 +668,29 @@ def log(mode=None, error=''):
         # traceback.print_exc()
         pass
 
+
+def reload_file(table):
+    v = API()
+    v.table = table
+    v.filename = f'{v.prefix}{v.table}.csv'
+    # v.create_table()
+    v.load_bcp_db()
+
+
 if __name__=='__main__':
     from pprint import pprint
     os.chdir('../../')
     # correct_ids_local()
-    # refresh_table('appointments','2067,2068')
-    # refresh_table('ledger', '2067,2068')
-    reset_table('appointments')
-    # refresh_table('treatments', pids='1019,1020,1068,1379,1380,1381,1382,1396,1397,1398,1399,1400,1401,1402,1403,1404,1405,1406,1407')
+    # reset_table('appointments')
+    # reload_file('ledger')
     # v = API()
     # v.practices()
-    # reset_table('patients')
+    # refresh_table('ledger', pids='1761,1798,1925,1938,2019,2067,2068')
     # v.available_appointments()
 
-
+    # reload_file('appointments')
+    # for table in ('fee_schedule','fee_schedule_procedure', 'insurance_claim', 'payment_type'):
+    #     reset_table(table)
+    reset_table('appointments')
 
 
