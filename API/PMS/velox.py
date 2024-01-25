@@ -247,7 +247,9 @@ class API:
         try:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
+            refresh = str(reload)
             for pid in self.pids:
+                reload = refresh #this is in case 1400 or 1486 change the reload state
                 global current
                 upload_pid = pid
                 sleep(0)
@@ -284,7 +286,10 @@ class API:
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
                                     upload_pid = '1486'
+                                    reload = False
                                 else:
+                                    if int(pid) == 1486:
+                                        reload = False
                                     l.insert(1, pid)
                                 cw.writerow(l)
                             if ids_to_delete and not reload:
@@ -366,9 +371,9 @@ class API:
                             elif not ids_to_delete:
                                 self.missing.append(pid)
         except:
-            # traceback.print_exc()
+            traceback.print_exc()
             sleep(10)
-            self.load_tmp_file(table, start)
+            self.load_tmp_file(table, start, reload=reload)
         if reload:
             self.create_table()
             self.authorization()
@@ -687,7 +692,7 @@ if __name__=='__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    refresh_table('treatments', pids='1400,')
+    refresh_table('treatments', pids='1400,1486')
     # v.available_appointments()
 
     # reload_file('appointments')
