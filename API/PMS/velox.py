@@ -298,9 +298,10 @@ class API:
                         db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                     self.load_bcp_db()
         except:
-            # traceback.print_exc()
+            print('******** ERROR ********')
+            traceback.print_exc()
             sleep(10)
-            self.load_sync_files(table, start)
+            self.load_sync_files(table, start, reload=reload)
 
 
 
@@ -349,6 +350,7 @@ class API:
                             ids_to_delete = []
                             ia = ids_to_delete.append
                             for i in p.get('data', []):
+                                print(i)
                                 l = list(i.values())
                                 ia(l[0])
                                 l = [cleanup(_) for _ in l]
@@ -685,12 +687,13 @@ if __name__=='__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    # refresh_table('ledger', pids='1761,1798,1925,1938,2019,2067,2068')
+    refresh_table('treatments', pids='1400,')
     # v.available_appointments()
 
     # reload_file('appointments')
     # for table in ('fee_schedule','fee_schedule_procedure', 'insurance_claim', 'payment_type'):
     #     reset_table(table)
-    reset_table('appointments')
+    reset_table('payment_type')
+
 
 
