@@ -31,7 +31,7 @@ clinic_ids = {
     '1406': '440',
     '1407': '594',
     '1414': '336',
-    '1432': '42',
+    '1438': '42',
     '1436': '50',
     '1486': '525',
     '1588': '542',
@@ -336,7 +336,7 @@ class API:
                             else:
                                 self.missing.append(pid)
                     if reload:
-                        self.authorization()
+                        # self.authorization()
                         print(f'WIPING {upload_pid}')
                         db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                     self.load_bcp_db()
@@ -716,7 +716,8 @@ if __name__ == '__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    refresh_table('perio_tooth')
+    for table in ('operatory', 'clinic', 'procedure_codes', 'payment_type', 'clinical_notes'):
+        refresh_table(table) #22
     # v.available_appointments()
 
     # reload_file('appointments')
