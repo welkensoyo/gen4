@@ -123,7 +123,7 @@ class API:
         elif self.option == 'sync':
             if everyhour.pause:
                 return 'Sync already in progress...'
-            spawn(velox.scheduled, self.pl.get('hour') or '24')
+            spawn(velox.scheduled, self.pl.get('hour'))
             return 'Running...'
         elif self.option in ('lastupdated','log'):
             return velox.log()
