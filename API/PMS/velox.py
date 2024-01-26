@@ -706,17 +706,14 @@ def reload_file(table):
     v.create_indexes()
 
 if __name__ == '__main__':
-    from gevent import monkey, spawn
-    monkey.patch_all()
     from pprint import pprint
     os.chdir('../../')
-    scheduled(1)
     # correct_ids_local()
     # reset_table('appointments')
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    # refresh_table('treatments', pids='1486')
+    refresh_table('providers')
     # v.available_appointments()
 
     # reload_file('appointments')
