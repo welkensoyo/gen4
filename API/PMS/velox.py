@@ -716,7 +716,7 @@ if __name__ == '__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    refresh_table('perio_chart')
+    refresh_table('perio_tooth')
     # v.available_appointments()
 
     # reload_file('appointments')
