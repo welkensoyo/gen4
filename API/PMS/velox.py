@@ -285,6 +285,7 @@ class API:
             self.create_folder()
             reload_save = reload
             for pid in self.pids:
+                data_empty = True
                 self.filename = f'{self.prefix}{self.table}-{pid}.csv'
                 reload = reload_save #this is in case 1400 or 1486 change the reload state
                 global current
@@ -315,6 +316,7 @@ class API:
                             ids_to_delete = []
                             ia = ids_to_delete.append
                             for i in p.get('data', []):
+                                data_empty = False
                                 # if i.get('plan_id'):
                                 #     print(i)
                                 l = list(i.values())
@@ -326,6 +328,7 @@ class API:
                                     reload = False
                                 else:
                                     if int(pid) == 1486:
+                                        print('1486 detected, setting to false')
                                         reload = False
                                     l.insert(1, pid)
                                 l = self.clinic_fix(l)
@@ -336,7 +339,7 @@ class API:
                                 db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                             else:
                                 self.missing.append(pid)
-                    if reload:
+                    if reload and not data_empty:
                         # self.authorization()
                         print(f'WIPING {upload_pid}')
                         db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
@@ -722,7 +725,7 @@ if __name__ == '__main__':
     # v = API()
     # v.practices()
     # for table in ('image_metadata',):
-    #     refresh_table(table) #13
+    #     refresh_table(table, pids='1486,1400') #13
     # v.available_appointments()
 
     # reload_file('appointments')
