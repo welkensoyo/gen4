@@ -1,5 +1,6 @@
-from gevent import monkey, spawn
-monkey.patch_all()
+if __name__ == '__main__':
+    from gevent import monkey, spawn
+    monkey.patch_all()
 from gevent import sleep
 from API.config import velox, sqlserver as ss
 import os
@@ -17,6 +18,10 @@ import requests
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
               'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
+
+nightly_tables = ('image_metadata', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',
+                  'clinic', 'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan',
+                  'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
@@ -247,9 +252,9 @@ class API:
         try:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
-            refresh = str(reload)
+            reload_save = reload
             for pid in self.pids:
-                reload = refresh #this is in case 1400 or 1486 change the reload state
+                reload = reload_save #this is in case 1400 or 1486 change the reload state
                 global current
                 upload_pid = pid
                 sleep(0)
@@ -292,6 +297,7 @@ class API:
                                         reload = False
                                     l.insert(1, pid)
                                 cw.writerow(l)
+                                sleep(0)
                             if ids_to_delete and not reload:
                                 print(f'UPDATING {len(ids_to_delete)}')
                                 db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
@@ -310,9 +316,10 @@ class API:
 
 
 
-    def load_tmp_file(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
+    def bulk_load(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
         print(start)
+        reload_save = reload
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
         def cleanup(val):
@@ -333,7 +340,7 @@ class API:
             with open(self.root+self.filename, 'w', newline='') as f:
                 cw = csv.writer(f, delimiter='|', lineterminator='\n')
                 for pid in self.pids:
-                    upload_pid = pid
+                    reload = reload_save
                     sleep(0)
                     print(pid)
                     meta = {
@@ -352,35 +359,24 @@ class API:
                         except:
                             break
                         for p in x:
-                            ids_to_delete = []
-                            ia = ids_to_delete.append
                             for i in p.get('data', []):
-                                print(i)
+                                # print(i)
                                 l = list(i.values())
-                                ia(l[0])
                                 l = [cleanup(_) for _ in l]
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
-                                    upload_pid = '1486'
                                 else:
                                     l.insert(1, pid)
                                 cw.writerow(l)
-                            if ids_to_delete and not reload:
-                                print(f'UPDATING {len(ids_to_delete)}')
-                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
-                            elif not ids_to_delete:
-                                self.missing.append(pid)
+                                sleep(0)
         except:
             traceback.print_exc()
             sleep(10)
-            self.load_tmp_file(table, start, reload=reload)
+            self.bulk_load(table, start, reload=reload_save)
         if reload:
             self.create_table()
             self.authorization()
         self.load_bcp_db()
-        if self.missing:
-            self.pids = tuple(self.missing)
-            self.load_sync_files(table, start, reload=reload)
 
     def delete_updated(self,ids):
         SQL = f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids))}); '''
@@ -446,10 +442,42 @@ class API:
                 txt = txt[:-1]+f''');'''
                 db.execute(txt)
                 db.execute(f'''CREATE UNIQUE INDEX ux_{self.table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
-                if self.table in ('ledger', 'treatments', 'appointments'):
-                    db.execute(f'''CREATE INDEX ix_{self.table}_clinic_id ON {self.prefix}{self.table}  (clinic_id); ''')
+                if self.table in ('appointments'):
+                    db.execute(f'''CREATE INDEX ix_{self.table}_clinic_id ON {self.prefix}{self.table}  (clinic_id, practice_id); ''')
+                elif self.table == 'ledger':
+                    db.execute('''CREATE NONCLUSTERED INDEX [ix_ledger_clinic_id] ON [dbo].[vx_ledger]
+( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+CREATE NONCLUSTERED INDEX [ix_vx_ledger_patient_id] ON [dbo].[vx_ledger]
+( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [ix_vx_ledger_payment_class] ON [dbo].[vx_ledger]
+( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [ix_vx_ledger_practice_id] ON [dbo].[vx_ledger]
+( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO''')
+
+                elif self.table == 'treatments':
+                    db.execute('''CREATE NONCLUSTERED INDEX [ix_treatments_clinic_id] ON [dbo].[vx_treatments]
+([clinic_id] ASC)WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [ix_treatments_completion_date] ON [dbo].[vx_treatments]
+( [completion_date] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+CREATE NONCLUSTERED INDEX [ix_treatments_patient_id] ON [dbo].[vx_treatments]
+( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [ix_treatments_tx_status] ON [dbo].[vx_treatments]
+( [tx_status] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+''')
         except:
-            # traceback.print_exc()
+            traceback.print_exc()
             pass
         return self
 
@@ -557,7 +585,7 @@ def reset(tables=None, practice=True):
         for t in tables:
             print(t)
             v = API()
-            v.load_tmp_file(t, reload=True)
+            v.bulk_load(t, reload=True)
             missing[t] = v.missing
         print(f'IT TOOK: {time.perf_counter() - start}')
         correct_ids()
@@ -575,7 +603,7 @@ def reset_table(tablename):
     # print('Updating practices')
     # API().practices()
     x = API()
-    x.load_tmp_file(tablename, reload=True)
+    x.bulk_load(tablename, reload=True)
     print(x.missing)
     correct_ids()
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -675,6 +703,21 @@ def log(mode=None, error=''):
         # traceback.print_exc()
         pass
 
+def nightly():
+    import time
+    start = time.perf_counter()
+    error = ''
+    try:
+        x = API()
+        x.practices()
+        x.available_appointments()
+        for table in nightly_tables:
+            refresh_table(table, pids=None)
+    except:
+        error = traceback.format_exc()
+    spawn(log, mode='full', error=str(error))
+    print(f'IT TOOK: {time.perf_counter() - start}')
+    return
 
 def reload_file(table):
     v = API()
@@ -683,8 +726,7 @@ def reload_file(table):
     # v.create_table()
     v.load_bcp_db()
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
     # correct_ids_local()
@@ -692,13 +734,15 @@ if __name__=='__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    refresh_table('treatments', pids='1400,1486')
+    # refresh_table('treatments', pids='1400,1486')
     # v.available_appointments()
 
     # reload_file('appointments')
     # for table in ('fee_schedule','fee_schedule_procedure', 'insurance_claim', 'payment_type'):
     #     reset_table(table)
-    reset_table('payment_type')
+    # reset_table('treatments')
+    # reset_table('appointments')
+    reset_table('ledger')
 
 
 
