@@ -12,11 +12,11 @@ import traceback
 import csv
 import requests
 
-full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metadata', 'providers', 'insurance_carriers', 'insurance_claim',
+full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
               'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
-nightly_tables = ('image_metadata', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',
+nightly_tables = ('providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',
                   'clinic', 'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan',
                   'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
