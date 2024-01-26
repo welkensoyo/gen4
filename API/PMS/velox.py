@@ -637,7 +637,7 @@ def refresh(pids=None):
     current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
 
-def scheduled(interval):
+def scheduled(interval=None):
     global current_sync
     error = ''
     from API.scheduling import everyhour
@@ -645,8 +645,10 @@ def scheduled(interval):
         everyhour.pause = True
         import time
         start = time.perf_counter()
-        if not last_time_sync:
+        if interval:
             x = arrow.get().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+        elif not last_time_sync:
+            x = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         else:
             x = last_time_sync
         print('Updating practices...')
@@ -708,12 +710,13 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
+    # scheduled()
     # correct_ids_local()
     # reset_table('appointments')
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    refresh_table('providers')
+    refresh_table('perio_chart')
     # v.available_appointments()
 
     # reload_file('appointments')
