@@ -1,6 +1,3 @@
-if __name__ == '__main__':
-    from gevent import monkey, spawn
-    monkey.patch_all()
 from gevent import sleep
 from API.config import velox, sqlserver as ss
 import os
@@ -634,7 +631,7 @@ def refresh(pids=None):
     except:
         error = traceback.format_exc()
     everyhour.pause = False
-    spawn(log, mode='full', error=str(error))
+    log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     global current
     current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
@@ -658,7 +655,7 @@ def scheduled(interval):
         tables = ('treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
         for t in tables:
             try:
-                print(t)
+                # print(t)
                 API().load_sync_files(t, start=x)
             except:
                 error = traceback.format_exc()
@@ -668,7 +665,7 @@ def scheduled(interval):
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
     except:
         error = traceback.format_exc()
-    spawn(log, mode='sync', error=error)
+    log(mode='sync', error=error)
     everyhour.pause = False
     current_sync = False
     return
@@ -709,8 +706,11 @@ def reload_file(table):
     v.create_indexes()
 
 if __name__ == '__main__':
+    from gevent import monkey, spawn
+    monkey.patch_all()
     from pprint import pprint
     os.chdir('../../')
+    scheduled(1)
     # correct_ids_local()
     # reset_table('appointments')
     # reload_file('ledger')
