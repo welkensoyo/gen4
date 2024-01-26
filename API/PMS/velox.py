@@ -24,28 +24,29 @@ nightly_tables = ('image_metadata', 'providers', 'insurance_carriers', 'insuranc
                   'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
 clinic_ids = {
-    '1432':'42',
-    '1436':'50',
-    '1379':'445',
-    '1019':'370',
-    '1020':'438',
-    '1068':'396',
-    '1397':'398',
-    '1398':'490',
-    '1399':'441',
-    '1406':'440',
-    '1407':'594',
-    '1414':'336',
-    '1486':'525',
-    '1588':'542',
-    '1606':'443'
+    '1019': '370',
+    '1020': '438',
+    '1068': '396',
+    '1379': '445',
+    '1397': '398',
+    '1398': '490',
+    '1399': '441',
+    '1406': '440',
+    '1407': '594',
+    '1414': '336',
+    '1432': '42',
+    '1436': '50',
+    '1486': '525',
+    '1588': '542',
+    '1606': '443'
 }
 
-clinic_position = {'treatments':16,
-                   'ledger':12,
-                   'appointments':12,
-                   'patients':26,
-                   }
+clinic_position = {
+    'treatments': 16,
+    'ledger': 12,
+    'appointments': 12,
+    'patients': 26,
+}
 
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
@@ -691,7 +692,6 @@ def nightly():
     try:
         x = API()
         x.practices()
-        x.available_appointments()
         for table in nightly_tables:
             refresh_table(table, pids=None)
     except:
@@ -716,7 +716,7 @@ if __name__ == '__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    refresh_table('treatments', pids='1486')
+    # refresh_table('treatments', pids='1486')
     # v.available_appointments()
 
     # reload_file('appointments')
