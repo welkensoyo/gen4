@@ -328,7 +328,6 @@ class API:
                                     reload = False
                                 else:
                                     if int(pid) == 1486:
-                                        print('1486 detected, setting to false')
                                         reload = False
                                     l.insert(1, pid)
                                 l = self.clinic_fix(l)
@@ -659,13 +658,11 @@ def scheduled(interval=None):
             x = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         else:
             x = last_time_sync
-        print('Updating practices...')
-        API().practices()
         print(x)
         tables = ('treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
         for t in tables:
             try:
-                # print(t)
+                print(t)
                 API().load_sync_files(t, start=x)
             except:
                 error = traceback.format_exc()
@@ -724,11 +721,12 @@ if __name__ == '__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    # for table in ('image_metadata',):
-    #     refresh_table(table, pids='1486,1400') #13
+    # for table in ('patient_recall', 'operatory',):
+    #     refresh_table(table, pids=None) #13
     # v.available_appointments()
 
-    # reload_file('appointments')
+    # reload_file('appointments')Sporked22!!
+
     # for table in ('fee_schedule','fee_schedule_procedure', 'insurance_claim', 'payment_type'):
     #     reset_table(table)
     # reset_table('treatments')
@@ -737,7 +735,7 @@ if __name__ == '__main__':
     # refresh_table('ledger', pids='1447,1448,1449,1450,1453,1454,1455,1464,1485,1489,1498,1588,1589,1605,1606,1616,1617,1634,1706,1707,1708,1709,1710,1714,1717,1718,1720,1734,1761,1798,1925,1938,2019,2067,2068' )
     # bcp = '/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_image_metadata in "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv" -b 50000 -S gen4-sql01.database.windows.net -U Dylan -P 8DqGUa536RC7 -e "/home/nfty/dataload/error.txt" -h TABLOCK -a 16384 -q -c -t "|"'
     # delfile = 'rm "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv"'
-
+    scheduled()
 
 
 
