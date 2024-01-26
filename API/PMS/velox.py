@@ -11,6 +11,7 @@ import arrow
 import traceback
 import csv
 import requests
+import shlex, subprocess
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
@@ -279,12 +280,12 @@ class API:
     def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('SYNC TMP FILE')
         self.table = table
-        self.filename = f'{self.prefix}{self.table}.csv'
         try:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
             reload_save = reload
             for pid in self.pids:
+                self.filename = f'{self.prefix}{self.table}-{pid}.csv'
                 reload = reload_save #this is in case 1400 or 1486 change the reload state
                 global current
                 upload_pid = pid
@@ -410,11 +411,15 @@ class API:
             self.table = table
         if not self.filename:
             self.filename = f'{self.prefix}{self.table}.csv'
-        print(self.filename)
+        # print(self.filename)
         # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -q -c -t "," '
-        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
+        # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
+        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         # print(bcp)
-        os.system(bcp)
+        os.popen(bcp)
+        # subprocess.Popen(shlex.split(bcp))
+        # p1 = subprocess.Popen(shlex.split(bcp), stdout=subprocess.PIPE)
+        # p2 = subprocess.Popen(fd, stdin=p1.stdout, stdout=subprocess.PIPE); p1.stdout.close()
         return self
 
     def create_folder(self):
@@ -716,8 +721,8 @@ if __name__ == '__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    for table in ('operatory', 'clinic', 'procedure_codes', 'payment_type', 'clinical_notes'):
-        refresh_table(table) #22
+    # for table in ('image_metadata',):
+    #     refresh_table(table) #13
     # v.available_appointments()
 
     # reload_file('appointments')
@@ -727,6 +732,8 @@ if __name__ == '__main__':
     # reset_table('appointments')
     # reload_file('ledger')
     # refresh_table('ledger', pids='1447,1448,1449,1450,1453,1454,1455,1464,1485,1489,1498,1588,1589,1605,1606,1616,1617,1634,1706,1707,1708,1709,1710,1714,1717,1718,1720,1734,1761,1798,1925,1938,2019,2067,2068' )
+    # bcp = '/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_image_metadata in "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv" -b 50000 -S gen4-sql01.database.windows.net -U Dylan -P 8DqGUa536RC7 -e "/home/nfty/dataload/error.txt" -h TABLOCK -a 16384 -q -c -t "|"'
+    # delfile = 'rm "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv"'
 
 
 
