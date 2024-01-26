@@ -22,6 +22,31 @@ full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'image_metad
 nightly_tables = ('image_metadata', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',
                   'clinic', 'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan',
                   'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
+
+clinic_ids = {
+    '1432':'42',
+    '1436':'50',
+    '1379':'445',
+    '1019':'370',
+    '1020':'438',
+    '1068':'396',
+    '1397':'398',
+    '1398':'490',
+    '1399':'441',
+    '1406':'440',
+    '1407':'594',
+    '1414':'336',
+    '1486':'525',
+    '1588':'542',
+    '1606':'443'
+}
+
+clinic_position = {'treatments':16,
+                   'ledger':12,
+                   'appointments':12,
+                   'patients':26,
+                   }
+
 CA = 'keys/sites-chain.pem'
 # CA = '../../keys/sites-chain.pem'
 upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10, block=False, retries=1)
@@ -234,21 +259,29 @@ class API:
         r = requests.post(url, json=query, headers=self.headers,  verify=CA)
         return j.dc(r.text)
 
+    def cleanup(self, val):
+        val = str(val)
+        if val == 'None':
+            return ''
+        try:
+            if val[10] == 'T' and val[19] == '.' and val[-1] == 'Z':
+                val = arrow.get(val).format('YYYY-MM-DD HH:mm:ss')
+        except:
+            return val
+        return val
+
+    def clinic_fix(self, l):
+        if self.table in list(clinic_position.keys()):
+            p = clinic_position[self.table]
+            if str(l[1]) in clinic_ids:
+                l[p] = clinic_ids[str(l[1])]
+        return l
+
+
     def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('SYNC TMP FILE')
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
-        def cleanup(val):
-            val = str(val)
-            if val == 'None':
-                return ''
-            try:
-                if val[10] == 'T' and val[19] == '.' and val[-1] == 'Z':
-                    val = arrow.get(val).format('YYYY-MM-DD HH:mm:ss')
-            except:
-                return val
-            return val
-
         try:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
@@ -287,7 +320,7 @@ class API:
                                 #     print(i)
                                 l = list(i.values())
                                 ia(l[0])
-                                l = [cleanup(_) for _ in l]
+                                l = [self.cleanup(_) for _ in l]
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
                                     upload_pid = '1486'
@@ -296,6 +329,7 @@ class API:
                                     if int(pid) == 1486:
                                         reload = False
                                     l.insert(1, pid)
+                                l = self.clinic_fix(l)
                                 cw.writerow(l)
                                 sleep(0)
                             if ids_to_delete and not reload:
@@ -322,17 +356,6 @@ class API:
         reload_save = reload
         self.table = table
         self.filename = f'{self.prefix}{self.table}.csv'
-        def cleanup(val):
-            val = str(val)
-            if val == 'None':
-                return ''
-            try:
-                if val[10]=='T' and val[19]=='.' and val[-1] =='Z':
-                    val = arrow.get(val).format('YYYY-MM-DD HH:mm:ss')
-            except:
-                return val
-            return val
-
 
         try:
             print(f'Creating Folder {self.root+self.filename}')
@@ -362,7 +385,7 @@ class API:
                             for i in p.get('data', []):
                                 # print(i)
                                 l = list(i.values())
-                                l = [cleanup(_) for _ in l]
+                                l = [self.cleanup(_) for _ in l]
                                 if int(pid) == 1400:
                                     l.insert(1, str(1486))
                                 else:
@@ -377,6 +400,7 @@ class API:
             self.create_table()
             self.authorization()
         self.load_bcp_db()
+        self.create_indexes()
 
     def delete_updated(self,ids):
         SQL = f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids))}); '''
@@ -388,6 +412,7 @@ class API:
             self.table = table
         if not self.filename:
             self.filename = f'{self.prefix}{self.table}.csv'
+        print(self.filename)
         # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -q -c -t "," '
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
         # print(bcp)
@@ -441,82 +466,46 @@ class API:
                         txt += f'{col} varchar(255),'
                 txt = txt[:-1]+f''');'''
                 db.execute(txt)
-                db.execute(f'''CREATE UNIQUE INDEX ux_{self.table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
-                if self.table in ('appointments'):
-                    db.execute(f'''CREATE INDEX ix_{self.table}_clinic_id ON {self.prefix}{self.table}  (clinic_id, practice_id); ''')
-                elif self.table == 'ledger':
-                    db.execute('''CREATE NONCLUSTERED INDEX [ix_ledger_clinic_id] ON [dbo].[vx_ledger]
-( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-SET ANSI_PADDING ON
-GO
-CREATE NONCLUSTERED INDEX [ix_vx_ledger_patient_id] ON [dbo].[vx_ledger]
-( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-CREATE NONCLUSTERED INDEX [ix_vx_ledger_payment_class] ON [dbo].[vx_ledger]
-( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-CREATE NONCLUSTERED INDEX [ix_vx_ledger_practice_id] ON [dbo].[vx_ledger]
-( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO''')
-
-                elif self.table == 'treatments':
-                    db.execute('''CREATE NONCLUSTERED INDEX [ix_treatments_clinic_id] ON [dbo].[vx_treatments]
-([clinic_id] ASC)WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-CREATE NONCLUSTERED INDEX [ix_treatments_completion_date] ON [dbo].[vx_treatments]
-( [completion_date] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-SET ANSI_PADDING ON
-GO
-CREATE NONCLUSTERED INDEX [ix_treatments_patient_id] ON [dbo].[vx_treatments]
-( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-CREATE NONCLUSTERED INDEX [ix_treatments_tx_status] ON [dbo].[vx_treatments]
-( [tx_status] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-''')
         except:
             traceback.print_exc()
             pass
         return self
 
+    def create_indexes(self):
+        db.execute(f'''CREATE UNIQUE INDEX ux_{self.table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
+        if self.table in ('appointments'):
+            db.execute(f'''CREATE INDEX ix_{self.table}_clinic_id ON {self.prefix}{self.table}  (clinic_id, practice_id); ''')
+        elif self.table == 'ledger':
+            db.execute('''CREATE NONCLUSTERED INDEX [ix_ledger_clinic_id] ON [dbo].[vx_ledger]
+        ( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_ledger_patient_id] ON [dbo].[vx_ledger]
+        ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_ledger_payment_class] ON [dbo].[vx_ledger]
+        ( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_ledger_practice_id] ON [dbo].[vx_ledger]
+        ( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        ''')
+
+        elif self.table == 'treatments':
+            db.execute('''CREATE NONCLUSTERED INDEX [ix_treatments_clinic_id] ON [dbo].[vx_treatments]
+        ([clinic_id] ASC)WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_treatments_completion_date] ON [dbo].[vx_treatments]
+        ( [completion_date] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_treatments_patient_id] ON [dbo].[vx_treatments]
+        ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_treatments_tx_status] ON [dbo].[vx_treatments]
+        ( [tx_status] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        ''')
 
 def correct_ids():
     print("Correcting IDs")
-    SQL = '''
-UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-'''
 
-    spawn(db.execute, SQL)
-    changes = [(1379, 445),
-               (1019, 370),
-               (1020, 438),
-               (1068, 396),
-               (1397, 398),
-               (1398, 490),
-               (1399, 441),
-               (1406, 440),
-               (1407, 594),
-               (1414, 336),
-               (1486, 525),
-               (1588, 542),
-               (1606, 443)]
-    SQL = ''
-    for table in ('treatments', 'appointments', 'ledger'):
-        for change in changes:
-            SQL += f"UPDATE dbo.vx_{table} SET clinic_id = '{change[1]}' WHERE practice_id = '{change[0]}' AND (clinic_id != '42' or clinic_id IS NULL); "
+    SQL = '''
+    UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    '''
     spawn(db.execute, SQL)
     global current
     current = 'No sync in progress...'
@@ -525,41 +514,33 @@ UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic
 
 def correct_ids_local():
     print("Correcting IDs")
+
     SQL = '''
-UPDATE dbo.vx_ledger SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_ledger SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-UPDATE dbo.vx_patients SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_patients SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-UPDATE dbo.vx_treatments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_treatments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-UPDATE dbo.vx_appointments SET clinic_id = '42' WHERE practice_id = '1438' AND (clinic_id != '42' or clinic_id IS NULL);
-UPDATE dbo.vx_appointments SET clinic_id = '50' WHERE practice_id = '1436' AND (clinic_id != '50' or clinic_id IS NULL);
-UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-'''
+    UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    '''
     db.execute(SQL)
-    changes = [(1379,445),
-               (1019,370),
-               (1020,438),
-               (1068,396),
-               (1397,398),
-               (1398,490),
-               (1399,441),
-               (1406,440),
-               (1407,594),
-               (1414,336),
-               (1486,525),
-               (1588,542),
-               (1606,443)]
-    SQL = ''
-    for table in ('treatments', 'appointments', 'ledger'):
-        for change in changes:
-            SQL += f"UPDATE dbo.vx_{table} SET clinic_id = '{change[1]}' WHERE practice_id = '{change[0]}' AND (clinic_id != '42' or clinic_id IS NULL); "
-    db.execute(SQL)
-
-
+    # changes = [(1379,445),
+    #            (1019,370),
+    #            (1020,438),
+    #            (1068,396),
+    #            (1397,398),
+    #            (1398,490),
+    #            (1399,441),
+    #            (1406,440),
+    #            (1407,594),
+    #            (1414,336),
+    #            (1486,525),
+    #            (1588,542),
+    #            (1606,443)]
+    # SQL = ''
+    # for table in ('treatments', 'appointments', 'ledger'):
+    #     for change in changes:
+    #         SQL += f"UPDATE dbo.vx_{table} SET clinic_id = '{change[1]}' WHERE practice_id = '{change[0]}' AND (clinic_id != '42' or clinic_id IS NULL); "
+    # print(SQL)
+    # db.execute(SQL)
     return
 
 
@@ -626,7 +607,7 @@ def refresh_table(tablename, pids=None):
         x.load_sync_files(tablename, reload=True)
         correct_ids_local()
     except:
-        error = traceback.print_exc()
+        error = traceback.format_exc()
     print(f'IT TOOK: {time.perf_counter() - start}')
     everyhour.pause = False
     global current
@@ -648,7 +629,7 @@ def refresh(pids=None):
             x.pids = pids
         for table in full_tables:
             x.load_sync_files(table, reload=True)
-        correct_ids_local()
+        correct_ids()
     except:
         error = traceback.format_exc()
     everyhour.pause = False
@@ -724,7 +705,8 @@ def reload_file(table):
     v.table = table
     v.filename = f'{v.prefix}{v.table}.csv'
     # v.create_table()
-    v.load_bcp_db()
+    # v.load_bcp_db()
+    v.create_indexes()
 
 if __name__ == '__main__':
     from pprint import pprint
@@ -734,7 +716,7 @@ if __name__ == '__main__':
     # reload_file('ledger')
     # v = API()
     # v.practices()
-    # refresh_table('treatments', pids='1400,1486')
+    refresh_table('treatments', pids='1486')
     # v.available_appointments()
 
     # reload_file('appointments')
@@ -742,7 +724,9 @@ if __name__ == '__main__':
     #     reset_table(table)
     # reset_table('treatments')
     # reset_table('appointments')
-    reset_table('ledger')
+    # reload_file('ledger')
+    # refresh_table('ledger', pids='1447,1448,1449,1450,1453,1454,1455,1464,1485,1489,1498,1588,1589,1605,1606,1616,1617,1634,1706,1707,1708,1709,1710,1714,1717,1718,1720,1734,1761,1798,1925,1938,2019,2067,2068' )
+
 
 
 
