@@ -413,15 +413,8 @@ class API:
             self.table = table
         if not self.filename:
             self.filename = f'{self.prefix}{self.table}.csv'
-        # print(self.filename)
-        # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -q -c -t "," '
-        # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
-        # print(bcp)
         os.popen(bcp)
-        # subprocess.Popen(shlex.split(bcp))
-        # p1 = subprocess.Popen(shlex.split(bcp), stdout=subprocess.PIPE)
-        # p2 = subprocess.Popen(fd, stdin=p1.stdout, stdout=subprocess.PIPE); p1.stdout.close()
         return self
 
     def create_folder(self):
@@ -700,7 +693,7 @@ def nightly():
             refresh_table(table, pids=None)
     except:
         error = traceback.format_exc()
-    spawn(log, mode='full', error=str(error))
+    log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
