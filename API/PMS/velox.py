@@ -687,8 +687,6 @@ def nightly():
     start = time.perf_counter()
     error = ''
     try:
-        x = API()
-        x.practices()
         for table in nightly_tables:
             refresh_table(table, pids=None)
     except:
@@ -728,7 +726,7 @@ if __name__ == '__main__':
     # refresh_table('ledger', pids='1447,1448,1449,1450,1453,1454,1455,1464,1485,1489,1498,1588,1589,1605,1606,1616,1617,1634,1706,1707,1708,1709,1710,1714,1717,1718,1720,1734,1761,1798,1925,1938,2019,2067,2068' )
     # bcp = '/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_image_metadata in "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv" -b 50000 -S gen4-sql01.database.windows.net -U Dylan -P 8DqGUa536RC7 -e "/home/nfty/dataload/error.txt" -h TABLOCK -a 16384 -q -c -t "|"'
     # delfile = 'rm "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv"'
-    scheduled()
+    # scheduled()
 
 
 
