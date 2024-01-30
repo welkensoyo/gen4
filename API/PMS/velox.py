@@ -727,6 +727,6 @@ if __name__ == '__main__':
     # bcp = '/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_image_metadata in "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv" -b 50000 -S gen4-sql01.database.windows.net -U Dylan -P 8DqGUa536RC7 -e "/home/nfty/dataload/error.txt" -h TABLOCK -a 16384 -q -c -t "|"'
     # delfile = 'rm "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv"'
     # scheduled()
-
+    nightly()
 
 

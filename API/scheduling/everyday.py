@@ -1,11 +1,10 @@
 from gevent import spawn
 import schedule
-
+from API.PMS import velox
 
 def nightly():
-    from API.PMS import velox
     velox.nightly()
 
 
 def set():
-    schedule.every().day.at("03:00").do(nightly)
+    schedule.every(1).day.at("03:00").do(nightly)
