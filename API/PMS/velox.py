@@ -721,7 +721,7 @@ if __name__ == '__main__':
     # correct_ids_local()
     # reset_table('appointments')
     # reload_file('ledger')
-    refresh('2253,')
+    refresh('2253')
 
     # for table in ('patient_recall', 'operatory',):
     #     refresh_table(table, pids=None) #13
