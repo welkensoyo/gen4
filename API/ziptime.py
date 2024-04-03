@@ -1,7 +1,7 @@
 import arrow
 import API.dbpg as db
 
-localtime = arrow.now('US/Central')
+localtime = arrow.now()
 qry = {
     'search':''' SELECT name,abbrev,utc_offset,is_dst FROM pg_timezone_names WHERE name like %s ''',
     'all':''' SELECT name,abbrev,utc_offset,is_dst FROM pg_timezone_names ''',

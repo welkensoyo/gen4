@@ -1,7 +1,6 @@
 import traceback
 from gevent import Timeout, sleep
 from geventwebsocket import WebSocketError
-from API.reports import Report as r
 import API.api as a
 import API.njson as json
 from API.render import Render

@@ -68,7 +68,7 @@ if __name__ == '__main__':
         botapp.add_files(staticfolder, prefix='static/')
         # botapp.add_files('dist', prefix='dist/')
         scheduler.start()
-        server = WSGIServer(("0.0.0.0", 80), botapp , handler_class=WebSocketHandler)
+        server = WSGIServer(("0.0.0.0", 8080), botapp , handler_class=WebSocketHandler)
 
         def shutdown():
             print('Shutting down ...')

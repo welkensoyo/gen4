@@ -56,8 +56,8 @@ current_sync = False
 
 class API:
     def __init__(self, qa=False, pids=None):
-
         self.root = str(Path.home())+'/dataload/'
+        print(self.root)
         self.prefix = 'dbo.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
@@ -171,12 +171,14 @@ class API:
         return self
 
     def practices(self):
+        print('PRACTICES')
         error = ''
         try:
             txt = ''
             tablename = 'practices'
             self.url = f"{self.pre_url}/private/practices"
             x = j.dc(self.transmit(self.url))
+            print(x)
             cols = list(x['practices'][0].keys())
             for col in cols:
                 if col == 'id':
@@ -199,20 +201,25 @@ class API:
 
             txt = txt[:-1] + f''');'''
             db.execute(f''' DROP TABLE {self.prefix}{tablename}; ''')
+            print('DROPPED TABLE')
             db.execute(txt)
+            print('CREATED NEW TABLE')
             db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
             vars = '%s,'*len(cols)
             PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
             for p in x['practices']:
                 row = []
                 for c in cols:
-                    row.append(str(p[c]))
+                    if p[c]:
+                        row.append(str(p[c]))
+                    else:
+                        row.append(None)
+                print(row)
                 db.execute(PSQL, *row)
         except:
             error = traceback.format_exc()
         log(mode='practices', error=str(error))
         return self
-
 
     def datastream(self, path):
         self.table = f'{path}'
@@ -509,6 +516,10 @@ def correct_ids():
     current = 'No sync in progress...'
     return
 
+def schema():
+    v = API()
+    for each in full_tables:
+        print(v.datastream(each))
 
 def correct_ids_local():
     print("Correcting IDs")
@@ -590,7 +601,6 @@ def reset_table(tablename):
 
 def refresh_table(tablename, pids=None):
     print(tablename)
-    print(pids)
     import time
     from API.scheduling import everyhour
     everyhour.pause = True
@@ -690,6 +700,7 @@ def nightly():
         for table in nightly_tables:
             refresh_table(table, pids=None)
     except:
+        traceback.print_exc()
         error = traceback.format_exc()
     log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -710,13 +721,13 @@ if __name__ == '__main__':
     # correct_ids_local()
     # reset_table('appointments')
     # reload_file('ledger')
-    # v = API()
-    # v.practices()
+    refresh('2253,')
+
     # for table in ('patient_recall', 'operatory',):
     #     refresh_table(table, pids=None) #13
     # v.available_appointments()
 
-    # reload_file('appointments')Sporked22!!
+    # reload_file('appointments')
 
     # for table in ('fee_schedule','fee_schedule_procedure', 'insurance_claim', 'payment_type'):
     #     reset_table(table)
@@ -727,6 +738,7 @@ if __name__ == '__main__':
     # bcp = '/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_image_metadata in "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv" -b 50000 -S gen4-sql01.database.windows.net -U Dylan -P 8DqGUa536RC7 -e "/home/nfty/dataload/error.txt" -h TABLOCK -a 16384 -q -c -t "|"'
     # delfile = 'rm "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv"'
     # scheduled()
-    nightly()
+    # nightly()
+    # refresh_table('patient_referrals', pids=None)
 
 
