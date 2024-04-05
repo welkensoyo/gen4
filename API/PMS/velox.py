@@ -11,7 +11,6 @@ import arrow
 import traceback
 import csv
 import requests
-import shlex, subprocess
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
@@ -207,6 +206,7 @@ class API:
             db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
             vars = '%s,'*len(cols)
             PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
+            rows = []
             for p in x['practices']:
                 row = []
                 for c in cols:
@@ -214,8 +214,10 @@ class API:
                         row.append(str(p[c]))
                     else:
                         row.append(None)
-                print(row)
-                db.execute(PSQL, *row)
+                rows.append(tuple(row))
+                # print(row)
+            rows = tuple(rows)
+            db.executemany(PSQL, rows)
         except:
             error = traceback.format_exc()
         log(mode='practices', error=str(error))
@@ -415,13 +417,16 @@ class API:
         db.execute(SQL)
         return self
 
-    def load_bcp_db(self, table= ''):
+    def load_bcp_db(self, table='', _async=True):
         if table:
             self.table = table
         if not self.filename:
             self.filename = f'{self.prefix}{self.table}.csv'
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
-        os.popen(bcp)
+        if _async:
+            os.popen(bcp)
+        else:
+            os.system(bcp)
         return self
 
     def create_folder(self):
@@ -630,7 +635,7 @@ def refresh(pids=None):
     everyhour.pause = True
     try:
         print('Updating practices')
-        API().practices()
+        # API().practices()
         x = API()
         if pids:
             pids = pids.split(',')
@@ -721,8 +726,8 @@ if __name__ == '__main__':
     # correct_ids_local()
     # reset_table('appointments')
     # reload_file('ledger')
-    refresh('2253')
-
+    # refresh('2253')
+    API().practices()
     # for table in ('patient_recall', 'operatory',):
     #     refresh_table(table, pids=None) #13
     # v.available_appointments()
