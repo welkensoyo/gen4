@@ -169,6 +169,10 @@ class API:
         self.load_bcp_db()
         return self
 
+    def procedure_code_lookup(self, pid):
+        SQL = 'SELECT id, code FROM dbo.vx_procedure_codes WHERE practice_id = %s'
+        return {p: c for p, c in db.fetchall(SQL, pid)}
+
     def practices(self):
         print('PRACTICES')
         error = ''
@@ -294,6 +298,9 @@ class API:
             self.create_folder()
             reload_save = reload
             for pid in self.pids:
+                proc_codes = None
+                if self.table == 'treatments':
+                    proc_codes = self.procedure_code_lookup(pid)
                 data_empty = True
                 self.filename = f'{self.prefix}{self.table}-{pid}.csv'
                 reload = reload_save #this is in case 1400 or 1486 change the reload state
@@ -340,6 +347,8 @@ class API:
                                         reload = False
                                     l.insert(1, pid)
                                 l = self.clinic_fix(l)
+                                if proc_codes:
+                                    l[13] = proc_codes.get(l[15], None)
                                 cw.writerow(l)
                                 sleep(0)
                             if ids_to_delete and not reload:
@@ -726,8 +735,8 @@ if __name__ == '__main__':
     # correct_ids_local()
     # reset_table('appointments')
     # reload_file('ledger')
-    # refresh('2253')
-    API().practices()
+    refresh_table('procedure_codes', '2253')
+    # API().practices()
     # for table in ('patient_recall', 'operatory',):
     #     refresh_table(table, pids=None) #13
     # v.available_appointments()
