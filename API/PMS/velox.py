@@ -60,6 +60,7 @@ class API:
         self.prefix = 'dbo.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
+        self.import_file = []
         self.pre_url = 'https://ds-prod.tx24sevendev.com/v1'
         if qa:
             self.pre_url = 'https://ds-test.tx24sevendev.com/v1'
@@ -347,8 +348,8 @@ class API:
                                         reload = False
                                     l.insert(1, pid)
                                 l = self.clinic_fix(l)
-                                if proc_codes:
-                                    l[13] = proc_codes.get(l[15], None)
+                                if proc_codes and l[15]:
+                                    l[13] = proc_codes.get(int(l[15]), None)
                                 cw.writerow(l)
                                 sleep(0)
                             if ids_to_delete and not reload:
@@ -374,32 +375,36 @@ class API:
         print(start)
         reload_save = reload
         self.table = table
-        self.filename = f'{self.prefix}{self.table}.csv'
-
+        self.import_file = []
         try:
             print(f'Creating Folder {self.root+self.filename}')
             self.create_folder()
-            with open(self.root+self.filename, 'w', newline='') as f:
-                cw = csv.writer(f, delimiter='|', lineterminator='\n')
-                for pid in self.pids:
-                    reload = reload_save
-                    sleep(0)
-                    print(pid)
-                    meta = {
-                        "practice": {
-                            "id": int(pid),
-                            "fetch_modified_since": start
-                        },
-                        "version": 1,
-                        "data_to_fetch": {
-                            f"{self.table}": {"records_per_entity": 5000}
-                        }}
-                    for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
-                        try:
-                            x = ndjson.loads(s)
-                            sleep(0)
-                        except:
-                            break
+            for pid in self.pids:
+                self.filename = f'{self.prefix}{self.table}_{pid}.csv'
+                self.import_file.append(self.filename)
+                proc_codes = None
+                if self.table == 'treatments':
+                    proc_codes = self.procedure_code_lookup(pid)
+                reload = reload_save
+                sleep(0)
+                print(pid)
+                meta = {
+                    "practice": {
+                        "id": int(pid),
+                        "fetch_modified_since": start
+                    },
+                    "version": 1,
+                    "data_to_fetch": {
+                        f"{self.table}": {"records_per_entity": 5000}
+                    }}
+                for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
+                    try:
+                        x = ndjson.loads(s)
+                        sleep(0)
+                    except:
+                        break
+                    with open(self.root + self.filename, 'w', newline='') as f:
+                        cw = csv.writer(f, delimiter='|', lineterminator='\n')
                         for p in x:
                             for i in p.get('data', []):
                                 # print(i)
@@ -409,6 +414,8 @@ class API:
                                     l.insert(1, str(1486))
                                 else:
                                     l.insert(1, pid)
+                                if proc_codes:
+                                    l[13] = proc_codes.get(l[15], None)
                                 cw.writerow(l)
                                 sleep(0)
         except:
@@ -418,7 +425,7 @@ class API:
         if reload:
             self.create_table()
             self.authorization()
-        self.load_bcp_db()
+        self.load_bcp_bulk()
         self.create_indexes()
 
     def delete_updated(self,ids):
@@ -436,6 +443,12 @@ class API:
             os.popen(bcp)
         else:
             os.system(bcp)
+        return self
+
+    def load_bcp_bulk(self):
+        for self.filename in self.import_file:
+            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
+            os.popen(bcp)
         return self
 
     def create_folder(self):
@@ -731,11 +744,15 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
+    scheduled(1)
+    # v = API()
+    # refresh_table('appointments', None)
     # scheduled()
     # correct_ids_local()
-    # reset_table('appointments')
+    # reset_table('ledger')
+    # reset_table('treatments')
     # reload_file('ledger')
-    refresh_table('procedure_codes', '2253')
+    # reset_table('appointments')
     # API().practices()
     # for table in ('patient_recall', 'operatory',):
     #     refresh_table(table, pids=None) #13
