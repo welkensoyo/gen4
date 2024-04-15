@@ -414,8 +414,8 @@ class API:
                                     l.insert(1, str(1486))
                                 else:
                                     l.insert(1, pid)
-                                if proc_codes:
-                                    l[13] = proc_codes.get(l[15], None)
+                                if proc_codes and l[15]:
+                                    l[13] = proc_codes.get(int(l[15]), None)
                                 cw.writerow(l)
                                 sleep(0)
         except:
@@ -744,7 +744,7 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
-    scheduled(1)
+    scheduled(3)
     # v = API()
     # refresh_table('appointments', None)
     # scheduled()
