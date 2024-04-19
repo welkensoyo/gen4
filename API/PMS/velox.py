@@ -208,8 +208,7 @@ class API:
             print('DROPPED TABLE')
             db.execute(txt)
             print('CREATED NEW TABLE')
-            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
-            vars = '%s,'*len(cols)
+            vars = '%s,'*(len(cols)+1)
             PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
             rows = []
             for p in x['practices']:
@@ -219,10 +218,12 @@ class API:
                         row.append(str(p[c]))
                     else:
                         row.append(None)
+                row.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
+                print(row)
                 rows.append(tuple(row))
-                # print(row)
             rows = tuple(rows)
             db.executemany(PSQL, rows)
+            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
         except:
             error = traceback.format_exc()
         log(mode='practices', error=str(error))
@@ -348,8 +349,7 @@ class API:
                                         reload = False
                                     l.insert(1, pid)
                                 l = self.clinic_fix(l)
-                                if self.table not in ('practices',):
-                                    l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
+                                l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
                                 if proc_codes and l[15]:
                                     l[13] = proc_codes.get(int(l[15]), None)
                                 cw.writerow(l)
@@ -416,10 +416,9 @@ class API:
                                     l.insert(1, str(1486))
                                 else:
                                     l.insert(1, pid)
+                                l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
                                 if proc_codes and l[15]:
                                     l[13] = proc_codes.get(int(l[15]), None)
-                                if self.table not in ('practices',):
-                                    l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
                                 cw.writerow(l)
                                 sleep(0)
         except:
@@ -500,7 +499,7 @@ class API:
                         txt += f'{col} varchar(max),'
                     else:
                         txt += f'{col} varchar(255),'
-                txt = txt[:-1]+f''');'''
+                txt = txt + f''' last_updated DATETIME2);'''
                 db.execute(txt)
         except:
             traceback.print_exc()
@@ -748,7 +747,7 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
-    scheduled(3)
+    # scheduled(3)
     # v = API()
     # refresh_table('appointments', None)
     # scheduled()
@@ -757,7 +756,7 @@ if __name__ == '__main__':
     # reset_table('treatments')
     # reload_file('ledger')
     # reset_table('appointments')
-    # API().practices()
+    API().practices()
     # for table in ('patient_recall', 'operatory',):
     #     refresh_table(table, pids=None) #13
     # v.available_appointments()
