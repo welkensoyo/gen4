@@ -14,10 +14,10 @@ import requests
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
-              'patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
+              'patient_referrals', 'clinical_notes', 'perio_chart', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
 nightly_tables = ('providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',
-                  'clinic', 'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'perio_charts', 'perio_tooth', 'treatment_plan',
+                  'clinic', 'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'perio_chart', 'perio_tooth', 'treatment_plan',
                   'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
 clinic_ids = {
@@ -203,7 +203,7 @@ class API:
                 else:
                     txt += f'{str(col)} varchar(255),'
 
-            txt = txt[:-1] + f''');'''
+            txt = txt + f''' last_updated DATETIME2);'''
             db.execute(f''' DROP TABLE {self.prefix}{tablename}; ''')
             print('DROPPED TABLE')
             db.execute(txt)
@@ -348,6 +348,7 @@ class API:
                                         reload = False
                                     l.insert(1, pid)
                                 l = self.clinic_fix(l)
+                                l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
                                 if proc_codes and l[15]:
                                     l[13] = proc_codes.get(int(l[15]), None)
                                 cw.writerow(l)
