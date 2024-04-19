@@ -348,7 +348,8 @@ class API:
                                         reload = False
                                     l.insert(1, pid)
                                 l = self.clinic_fix(l)
-                                l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
+                                if self.table not in ('practices',):
+                                    l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
                                 if proc_codes and l[15]:
                                     l[13] = proc_codes.get(int(l[15]), None)
                                 cw.writerow(l)
@@ -417,6 +418,8 @@ class API:
                                     l.insert(1, pid)
                                 if proc_codes and l[15]:
                                     l[13] = proc_codes.get(int(l[15]), None)
+                                if self.table not in ('practices',):
+                                    l.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
                                 cw.writerow(l)
                                 sleep(0)
         except:
