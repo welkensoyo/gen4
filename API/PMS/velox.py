@@ -540,6 +540,7 @@ def correct_ids():
     UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE t set t.code = p.code from vx_treatments as t inner join vx_procedure_codes p on p.id = t.procedure_id and p.practice_id = t.practice_id WHERE t.code IS NULL;
     '''
     spawn(db.execute, SQL)
     global current
@@ -561,25 +562,6 @@ def correct_ids_local():
     UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     '''
     db.execute(SQL)
-    # changes = [(1379,445),
-    #            (1019,370),
-    #            (1020,438),
-    #            (1068,396),
-    #            (1397,398),
-    #            (1398,490),
-    #            (1399,441),
-    #            (1406,440),
-    #            (1407,594),
-    #            (1414,336),
-    #            (1486,525),
-    #            (1588,542),
-    #            (1606,443)]
-    # SQL = ''
-    # for table in ('treatments', 'appointments', 'ledger'):
-    #     for change in changes:
-    #         SQL += f"UPDATE dbo.vx_{table} SET clinic_id = '{change[1]}' WHERE practice_id = '{change[0]}' AND (clinic_id != '42' or clinic_id IS NULL); "
-    # print(SQL)
-    # db.execute(SQL)
     return
 
 
@@ -660,7 +642,7 @@ def refresh(pids=None):
     everyhour.pause = True
     try:
         print('Updating practices')
-        # API().practices()
+        API().practices()
         x = API()
         if pids:
             pids = pids.split(',')
@@ -692,7 +674,7 @@ def scheduled(interval=None):
         else:
             x = last_time_sync
         print(x)
-        tables = ('treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
+        tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
         for t in tables:
             try:
                 print(t)
@@ -747,16 +729,18 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
+    # nightly()
     # scheduled(3)
     # v = API()
-    # refresh_table('appointments', None)
+    # refresh_table('appointments', '2253')
+    refresh_table('appointments', '2253')
     # scheduled()
     # correct_ids_local()
     # reset_table('ledger')
     # reset_table('treatments')
     # reload_file('ledger')
     # reset_table('appointments')
-    API().practices()
+    # API().practices()
     # for table in ('patient_recall', 'operatory',):
     #     refresh_table(table, pids=None) #13
     # v.available_appointments()

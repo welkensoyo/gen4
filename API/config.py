@@ -26,7 +26,7 @@ admins = [
 ]
 master_pass = ''
 psqldsn = ""
-sqlserver = SimpleNamespace(**{'server':'gen4-sql01.database.windows.net', 'user':'Dylan', 'password':'8DqGUa536RC7', 'database':'gen4_dw'})
+sqlserver = SimpleNamespace(**{'server':'gen4-sql01.database.windows.net', 'user':'pyapi', 'password':'LSkjda9345h@', 'database':'gen4_dw'})
 
 working_folder = '\data'
 
