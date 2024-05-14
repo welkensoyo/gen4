@@ -136,7 +136,7 @@ class API:
                 query = {
                     'query':
                         '''query ($practice_id: ID! $start_date: Date! $end_date: Date!) {
-          practice(id:$practice_id) { 
+          practice(id:$practice_id) {
             apptAvailability(start_date: $start_date, end_date:$end_date){
              time_slot
              operatory {
@@ -166,7 +166,7 @@ class API:
                                 count+=1
                                 cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
                 # print(result)
-        db.execute('TRUNCATE dbo.vx_available_appointments')
+        db.execute('TRUNCATE TABLE dbo.vx_available_appointments')
         self.load_bcp_db()
         return self
 
