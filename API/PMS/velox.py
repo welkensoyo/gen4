@@ -120,7 +120,7 @@ class API:
     def treatment_plan(self): return self.datastream('treatment_plan')
     def insurance_groups(self): return self.datastream('insurance_groups')
 
-    def available_appointments(self, pids=None, days=7):
+    def available_appointments(self, pids=None, days=60):
         self.table = 'available_appointments'
         self.filename = f'{self.prefix}{self.table}.csv'
         if not pids:
@@ -166,7 +166,7 @@ class API:
                                 count+=1
                                 cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
                 # print(result)
-        db.execute('DELETE FROM dbo.vx_available_appointments')
+        db.execute('TRUNCATE dbo.vx_available_appointments')
         self.load_bcp_db()
         return self
 
@@ -765,7 +765,7 @@ if __name__ == '__main__':
     # scheduled(3)
     # v = API()
     # refresh_table('appointments', '2253')
-    reset_table('operatory')
+    API().available_appointments()
     # scheduled()
     # correct_ids_local()
     # reset_table('ledger')
