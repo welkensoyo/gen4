@@ -150,7 +150,7 @@ class API:
         ''',
         'variables': {
         'practice_id': pid,
-        'start_date': arrow.get().format('YYYY-MM-DD[T]00:00:00.000[Z]'),
+        'start_date': arrow.get().shift(days=-60).format('YYYY-MM-DD[T]00:00:00.000[Z]'),
         'end_date': arrow.get().shift(days=int(days)).format('YYYY-MM-DD[T]00:00:00.000[Z]')
                 }}
                 appointments = self.graphql(query)
@@ -371,6 +371,27 @@ class API:
             self.load_sync_files(table, start, reload=reload)
 
 
+    def bulk_reload(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
+        print('LOAD TMP FILE')
+        print(start)
+        reload_save = reload
+        self.table = table
+        self.import_file = []
+        try:
+            print(f'Creating Folder {self.root+self.filename}')
+            self.create_folder()
+            for pid in self.pids:
+                self.filename = f'{self.prefix}{self.table}_{pid}.csv'
+                self.import_file.append(self.filename)
+                print(pid)
+        except:
+            pass
+        if reload:
+            self.create_table()
+            self.authorization()
+        self.load_bcp_bulk(_async=False)
+        self.create_indexes()
+
 
     def bulk_load(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
@@ -428,7 +449,7 @@ class API:
         if reload:
             self.create_table()
             self.authorization()
-        self.load_bcp_bulk()
+        self.load_bcp_bulk(_async=False)
         self.create_indexes()
 
     def delete_updated(self,ids):
@@ -448,10 +469,9 @@ class API:
             os.system(bcp)
         return self
 
-    def load_bcp_bulk(self):
+    def load_bcp_bulk(self, _async=True):
         for self.filename in self.import_file:
-            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 50000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
-            os.popen(bcp)
+            self.load_bcp_db(_async=_async)
         return self
 
     def create_folder(self):
@@ -611,6 +631,18 @@ def reset_table(tablename):
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
+def reload_table(tablename):
+    import time
+    start = time.perf_counter()
+    # print('Updating practices')
+    # API().practices()
+    x = API()
+    x.bulk_reload(tablename, reload=True)
+    print(x.missing)
+    correct_ids()
+    print(f'IT TOOK: {time.perf_counter() - start}')
+    return
+
 def refresh_table(tablename, pids=None):
     print(tablename)
     import time
@@ -733,7 +765,7 @@ if __name__ == '__main__':
     # scheduled(3)
     # v = API()
     # refresh_table('appointments', '2253')
-    refresh_table('appointments', '2253')
+    reset_table('operatory')
     # scheduled()
     # correct_ids_local()
     # reset_table('ledger')
