@@ -154,6 +154,9 @@ class API:
         'end_date': arrow.get().shift(days=int(days)).format('YYYY-MM-DD[T]00:00:00.000[Z]')
                 }}
                 appointments = self.graphql(query)
+                if 'data' not in appointments:
+                    sleep(5)
+                    appointments = self.graphql(query)
                 appointments = appointments['data']['practice']['apptAvailability']
                 for appointment in appointments:
                     # print(appointment['time_slot'])
@@ -167,7 +170,7 @@ class API:
                                 cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
                 # print(result)
         db.execute('TRUNCATE TABLE dbo.vx_available_appointments')
-        self.load_bcp_db()
+        self.load_bcp_db(_async=False)
         return self
 
     def procedure_code_lookup(self, pid):
@@ -580,6 +583,7 @@ def correct_ids_local():
     UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
     '''
     db.execute(SQL)
     return
