@@ -120,7 +120,7 @@ class API:
     def treatment_plan(self): return self.datastream('treatment_plan')
     def insurance_groups(self): return self.datastream('insurance_groups')
 
-    def available_appointments(self, pids=None, days=60):
+    def available_appointments(self, pids=None, days=7):
         self.table = 'available_appointments'
         self.filename = f'{self.prefix}{self.table}.csv'
         if not pids:
@@ -150,7 +150,7 @@ class API:
         ''',
         'variables': {
         'practice_id': pid,
-        'start_date': arrow.get().shift(days=-60).format('YYYY-MM-DD[T]00:00:00.000[Z]'),
+        'start_date': arrow.get().format('YYYY-MM-DD[T]00:00:00.000[Z]'),
         'end_date': arrow.get().shift(days=int(days)).format('YYYY-MM-DD[T]00:00:00.000[Z]')
                 }}
                 appointments = self.graphql(query)
@@ -311,7 +311,6 @@ class API:
                 reload = reload_save #this is in case 1400 or 1486 change the reload state
                 global current
                 upload_pid = pid
-                sleep(0)
                 print(pid)
                 current = f'Syncing {pid} - {table}...'
                 meta = {
@@ -364,7 +363,7 @@ class API:
                                 self.missing.append(pid)
                     if reload and not data_empty:
                         # self.authorization()
-                        print(f'WIPING {upload_pid}')
+                        print(f'WIPING {upload_pid} {self.prefix}{self.table}')
                         db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                     self.load_bcp_db()
         except:
@@ -530,7 +529,7 @@ class API:
         return self
 
     def create_indexes(self):
-        db.execute(f'''CREATE UNIQUE INDEX ux_{self.table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
+        db.execute(f'''CREATE UNIQUE CLUSTERED INDEX ux_{self.table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
         if self.table in ('appointments'):
             db.execute(f'''CREATE INDEX ix_{self.table}_clinic_id ON {self.prefix}{self.table}  (clinic_id, practice_id); ''')
         elif self.table == 'ledger':
@@ -765,11 +764,16 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
+
     # nightly()
     # scheduled(3)
     # v = API()
-    # refresh_table('appointments', '2253')
-    API().available_appointments()
+    scheduled(interval=24)
+    # refresh_table('insurance_carriers', None)
+    # v = API()
+    # nightly()
+    #scheduled(720)
+    #v.available_appointments()
     # scheduled()
     # correct_ids_local()
     # reset_table('ledger')
@@ -794,5 +798,6 @@ if __name__ == '__main__':
     # scheduled()
     # nightly()
     # refresh_table('patient_referrals', pids=None)
+
 
 
