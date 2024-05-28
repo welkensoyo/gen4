@@ -593,7 +593,7 @@ def last_updated(table='ledger'):
     SQL = f'SELECT TOP 1 {t[table]} FROM dbo.vx_{table} WHERE {t[table]} <= GETDATE() '
     return db.fetchone(SQL)[0]
 
-def reset(tables=None, practice=True):
+def reset(tables=None, practice=False):
     error = ''
     from API.scheduling import everyhour
     missing = {}
@@ -677,7 +677,7 @@ def refresh(pids=None):
     everyhour.pause = True
     try:
         print('Updating practices')
-        API().practices()
+        # API().practices()
         x = API()
         if pids:
             pids = pids.split(',')
@@ -768,8 +768,8 @@ if __name__ == '__main__':
     # nightly()
     # scheduled(3)
     # v = API()
-    scheduled(interval=24)
-    # refresh_table('insurance_carriers', None)
+    #scheduled(interval=24)
+    # refresh_table('appointments', None)
     # v = API()
     # nightly()
     #scheduled(720)

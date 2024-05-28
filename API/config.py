@@ -27,7 +27,7 @@ admins = [
 master_pass = ''
 psqldsn = ""
 sqlserver = SimpleNamespace(**{'server':'gen4-sql01.database.windows.net', 'user':'pyapi', 'password':'LSkjda9345h@', 'database':'gen4_dw'})
-
+sa = 'C@f9S^oQLm1k'
 working_folder = '\data'
 
 cloud9 = SimpleNamespace(
