@@ -93,7 +93,6 @@ class API:
         # print(last_time_sync)
         return last_time_sync
 
-
     def authorization(self):
         self.url = self.pre_url+'/public/auth'
         meta = {
@@ -105,7 +104,6 @@ class API:
         cookie = j.dc(r.data.decode())
         self.headers['Cookie'] = f"authToken={cookie['token']}"
         return self
-
 
     def insurance_carriers(self): return self.datastream('insurance_carriers')
     def image_metadata(self): return self.datastream('image_metadata')
@@ -120,7 +118,7 @@ class API:
     def treatment_plan(self): return self.datastream('treatment_plan')
     def insurance_groups(self): return self.datastream('insurance_groups')
 
-    def available_appointments(self, pids=None, days=7):
+    def available_appointments(self, pids=None, days=2):
         self.table = 'available_appointments'
         self.filename = f'{self.prefix}{self.table}.csv'
         if not pids:
@@ -151,9 +149,11 @@ class API:
         'variables': {
         'practice_id': pid,
         'start_date': arrow.get().format('YYYY-MM-DD[T]00:00:00.000[Z]'),
-        'end_date': arrow.get().shift(days=int(days)).format('YYYY-MM-DD[T]00:00:00.000[Z]')
+        # 'end_date': arrow.get().shift(days=int(days)).format('YYYY-MM-DD[T]00:00:00.000[Z]')
+        'end_date': arrow.get().format('YYYY-MM-DD[T]00:00:00.000[Z]')
                 }}
                 appointments = self.graphql(query)
+                # print(appointments)
                 if 'data' not in appointments:
                     sleep(5)
                     appointments = self.graphql(query)
@@ -164,10 +164,15 @@ class API:
                     for category in appointment.keys():
                         if category == 'time_slot':
                             continue
-                        if 6 <= int(tslot.format('HH')) < 20:
-                            for p in appointment[category]:
-                                count+=1
-                                cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
+                        for p in appointment[category]:
+                            count += 1
+                            # print('writing row {}'.format(count))
+                            cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
+                        # if 6 <= int(tslot.format('HH')) < 20:
+                        #     for p in appointment[category]:
+                        #         count+=1
+                        #         print('writing row {}'.format(count))
+                        #         cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
                 # print(result)
         db.execute('TRUNCATE TABLE dbo.vx_available_appointments')
         self.load_bcp_db(_async=False)
@@ -294,7 +299,6 @@ class API:
                 l[p] = clinic_ids[str(l[1])]
         return l
 
-
     def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('SYNC TMP FILE')
         self.table = table
@@ -391,9 +395,8 @@ class API:
         if reload:
             self.create_table()
             self.authorization()
-        self.load_bcp_bulk(_async=False)
+        self.load_bcp_bulk(_async=True)
         self.create_indexes()
-
 
     def bulk_load(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
@@ -405,6 +408,7 @@ class API:
             print(f'Creating Folder {self.root+self.filename}')
             self.create_folder()
             for pid in self.pids:
+                print(pid)
                 self.filename = f'{self.prefix}{self.table}_{pid}.csv'
                 self.import_file.append(self.filename)
                 proc_codes = None
@@ -412,7 +416,6 @@ class API:
                     proc_codes = self.procedure_code_lookup(pid)
                 reload = reload_save
                 sleep(0)
-                print(pid)
                 meta = {
                     "practice": {
                         "id": int(pid),
@@ -449,9 +452,10 @@ class API:
             sleep(10)
             self.bulk_load(table, start, reload=reload_save)
         if reload:
+            print('RESETTING TABLE')
             self.create_table()
             self.authorization()
-        self.load_bcp_bulk(_async=False)
+        self.load_bcp_bulk(_async=True)
         self.create_indexes()
 
     def delete_updated(self,ids):
@@ -484,7 +488,7 @@ class API:
 
     def drop_table(self):
         print(f'DROPPING TABLE {self.prefix}{self.table}')
-        PSQL = f''' DROP TABLE {self.prefix}{self.table}; '''
+        PSQL = f''' DROP TABLE IF EXISTS {self.prefix}{self.table}; '''
         db.execute(PSQL)
         return self
 
@@ -501,15 +505,15 @@ class API:
                 self.drop_table()
                 for col in x['properties']['fields']['items']['enum']:
                     if col == 'id':
-                        txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{self.table}' and xtype='U') CREATE TABLE {self.prefix}{self.table} 
+                        txt = f'''CREATE TABLE {self.prefix}{self.table} 
                         (id bigint, practice_id int, '''
                     elif col in ('_id','referral_date'):
                         txt += f'{col} varchar(255),'
                     elif col in ('duration', 'status', 'tx_status'):
                         txt += f'{col} INT,'
-                    elif col in ('plan_id', 'insurance_id', 'guarantor_id'):
+                    elif col in ('plan_id', 'insurance_id', 'guarantor_id', 'provider_id', 'patient_id'):
                         txt += f'{col} BIGINT,'
-                    elif col in ('amount','cost','co_pay'):
+                    elif col in ('amount','cost','co_pay','bal_30_60','bal_60_90','bal_90_plus'):
                         txt += f'{col} DECIMAL(19, 4),'
                     elif col in ('',):
                         txt += f'{col} DECIMAL(19, 4),'
@@ -563,6 +567,7 @@ def correct_ids():
     UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE t set t.code = p.code from vx_treatments as t inner join vx_procedure_codes p on p.id = t.procedure_id and p.practice_id = t.practice_id WHERE t.code IS NULL;
+    UPDATE dbo.vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
     '''
     spawn(db.execute, SQL)
     global current
@@ -646,7 +651,7 @@ def reload_table(tablename):
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
-def refresh_table(tablename, pids=None):
+def resync_table(tablename, pids=None):
     print(tablename)
     import time
     from API.scheduling import everyhour
@@ -745,7 +750,7 @@ def nightly():
     error = ''
     try:
         for table in nightly_tables:
-            refresh_table(table, pids=None)
+            resync_table(table, pids=None)
     except:
         traceback.print_exc()
         error = traceback.format_exc()
@@ -764,40 +769,7 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
-
-    # nightly()
-    # scheduled(3)
-    # v = API()
-    #scheduled(interval=24)
-    # refresh_table('appointments', None)
-    # v = API()
-    # nightly()
-    #scheduled(720)
-    #v.available_appointments()
-    # scheduled()
-    # correct_ids_local()
-    # reset_table('ledger')
-    # reset_table('treatments')
-    # reload_file('ledger')
-    # reset_table('appointments')
-    # API().practices()
-    # for table in ('patient_recall', 'operatory',):
-    #     refresh_table(table, pids=None) #13
-    # v.available_appointments()
-
-    # reload_file('appointments')
-
-    # for table in ('fee_schedule','fee_schedule_procedure', 'insurance_claim', 'payment_type'):
-    #     reset_table(table)
-    # reset_table('treatments')
-    # reset_table('appointments')
-    # reload_file('ledger')
-    # refresh_table('ledger', pids='1447,1448,1449,1450,1453,1454,1455,1464,1485,1489,1498,1588,1589,1605,1606,1616,1617,1634,1706,1707,1708,1709,1710,1714,1717,1718,1720,1734,1761,1798,1925,1938,2019,2067,2068' )
-    # bcp = '/opt/mssql-tools/bin/bcp gen4_dw.dbo.vx_image_metadata in "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv" -b 50000 -S gen4-sql01.database.windows.net -U Dylan -P 8DqGUa536RC7 -e "/home/nfty/dataload/error.txt" -h TABLOCK -a 16384 -q -c -t "|"'
-    # delfile = 'rm "/home/nfty/dataload/dbo.vx_image_metadata-1019.csv"'
-    # scheduled()
-    # nightly()
-    # refresh_table('patient_referrals', pids=None)
+    resync_table('treatments', '1430')
 
 
 

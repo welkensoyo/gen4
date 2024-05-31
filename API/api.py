@@ -140,7 +140,7 @@ class API:
                 return False
             if pids == 'ALL':
                 pids = None
-            spawn(velox.refresh_table, table, pids)
+            spawn(velox.resync_table, table, pids)
         return str(everyhour.pause)
 
 
