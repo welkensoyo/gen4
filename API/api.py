@@ -133,14 +133,14 @@ class API:
             everyhour.pause = False
         elif self.option == 'fullrefresh':
             spawn(velox.refresh, self.pl.get('pids'))
+            return 'Full Refresh In Progress...'
         elif self.option == 'refresh':
             table = self.option2
             pids = self.pl.get('pids')
-            if not pids:
-                return False
             if pids == 'ALL':
                 pids = None
-            spawn(velox.resync_table, table, pids)
+            spawn(velox.resync_table, table, pids or False)
+            return 'Refreshing table: '+table
         return str(everyhour.pause)
 
 

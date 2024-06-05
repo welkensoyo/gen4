@@ -627,6 +627,7 @@ def reset(tables=None, practice=False):
     everyhour.pause = False
     return tables
 
+
 def reset_table(tablename):
     import time
     start = time.perf_counter()
@@ -639,17 +640,6 @@ def reset_table(tablename):
     print(f'IT TOOK: {time.perf_counter() - start}')
     return
 
-def reload_table(tablename):
-    import time
-    start = time.perf_counter()
-    # print('Updating practices')
-    # API().practices()
-    x = API()
-    x.bulk_reload(tablename, reload=True)
-    print(x.missing)
-    correct_ids()
-    print(f'IT TOOK: {time.perf_counter() - start}')
-    return
 
 def resync_table(tablename, pids=None):
     print(tablename)
@@ -668,6 +658,7 @@ def resync_table(tablename, pids=None):
         correct_ids_local()
     except:
         error = traceback.format_exc()
+        log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     everyhour.pause = False
     global current
@@ -769,7 +760,7 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
-    resync_table('treatments', '1430')
+    reset_table('providers')
 
 
 
