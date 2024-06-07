@@ -8,6 +8,6 @@ def set_weekday(job, time, *args):
     schedule.every().thursday.at(time).do(job, *args)
     schedule.every().friday.at(time).do(job, *args)
 
-def set():
+def _set():
     # set_weekday(run_eod_attachments, '11:00')
     pass

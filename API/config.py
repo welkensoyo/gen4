@@ -2,7 +2,6 @@ from types import SimpleNamespace
 import socket
 host = socket.gethostname()
 
-scheduler = False
 beakerconfig = {
     'session.type': 'cookie',
     # 'session.type': 'ext:redis',
@@ -29,6 +28,7 @@ psqldsn = ""
 sqlserver = SimpleNamespace(**{'server':'gen4-sql01.database.windows.net', 'user':'pyapi', 'password':'LSkjda9345h@', 'database':'gen4_dw'})
 sa = 'C@f9S^oQLm1k'
 working_folder = '\data'
+port = 80
 
 cloud9 = SimpleNamespace(
     url_atl =  'https://atl-partner-cloud9ortho.com/GetData.ashx',
@@ -81,4 +81,9 @@ birdeye = SimpleNamespace(
 )
 
 scheduler = True
+
 print(host)
+if host in ('nfty-linux',):
+    scheduler = False
+    compress = False
+    port = 8080

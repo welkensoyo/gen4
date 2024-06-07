@@ -6,6 +6,7 @@ import API.njson as json
 from API.render import Render
 from bottle import Bottle, get, request, response, abort, route, error, template, redirect, static_file, hook
 import API.PMS.velox as v
+from API.log import log as _log
 
 mainappRoute = Bottle()
 
@@ -40,6 +41,9 @@ def _index():
 @route('/api/<command>/<option>', method=['GET','POST'])
 @route('/api/<command>/<option>/<option2>', method=['GET','POST'])
 def _api(command=None, option='', option2=''):
+    result = None
+    code = 500
+    error = None
     response.headers['Content-Type'] = 'application/json'
     response.headers['Cache-Control'] = 'no-cache'
     query = json.merge_dicts(dict(request.forms), dict(request.query.decode()))
@@ -49,23 +53,28 @@ def _api(command=None, option='', option2=''):
         abort(401, 'Oops, Please check API specifictions')
     payload['option'] = option
     payload['option2'] = option2
+    _log(command, request.method, json.jc(payload), 0, '')
     wapi = a.API(payload, apikey, request.environ, request.method.lower())
     func = getattr(wapi, "{}" .format(command), None)
     try:
         if callable(func):
             result = func()
             if result:
-                return json.jc(result)
+                result = json.jc(result)
+                code = 200
             else:
-                return json.jc({})
+                result = json.jc({})
+                code = 200
     except KeyError as exc:
-        traceback.print_exc()
+        error = traceback.format_exc()
         sleep(1)
-        return json.jc({'status': False, 'message': 'Missing ' + str(exc)})
+        result = json.jc({'status': False, 'message': 'Missing ' + str(exc)})
     except Exception as exc:
-        traceback.print_exc()
+        error = traceback.format_exc()
         sleep(5)
-        return json.jc({'status': False, 'message': 'Oops, please check API specifications...'})
+        result = json.jc({'status': False, 'message': 'Oops, please check API specifications...'})
+    _log(command, request.method, json.jc(payload), code, error or result)
+    return result
 
 
 #websocket

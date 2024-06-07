@@ -67,8 +67,10 @@ if __name__ == '__main__':
         botapp = WhiteNoise(botapp)
         botapp.add_files(staticfolder, prefix='static/')
         # botapp.add_files('dist', prefix='dist/')
-        scheduler.start()
-        server = WSGIServer(("0.0.0.0", 80), botapp, handler_class=WebSocketHandler)
+        if config.scheduler:
+            scheduler.start()
+        server = WSGIServer(("0.0.0.0", config.port), botapp, handler_class=WebSocketHandler)
+        print('Server Started...')
 
         def shutdown():
             print('Shutting down ...')

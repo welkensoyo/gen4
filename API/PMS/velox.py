@@ -11,6 +11,9 @@ import arrow
 import traceback
 import csv
 import requests
+from API.log import log as _log, velox_log as log
+
+sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
@@ -56,10 +59,11 @@ current_sync = False
 class API:
     def __init__(self, qa=False, pids=None):
         self.root = str(Path.home())+'/dataload/'
-        print(self.root)
         self.prefix = 'dbo.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
+        self.table = ''
+        self.url = ''
         self.import_file = []
         self.pre_url = 'https://ds-prod.tx24sevendev.com/v1'
         if qa:
@@ -299,7 +303,7 @@ class API:
                 l[p] = clinic_ids[str(l[1])]
         return l
 
-    def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
+    def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False, verbose=False):
         print('SYNC TMP FILE')
         self.table = table
         try:
@@ -329,7 +333,8 @@ class API:
                 for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
                     try:
                         x = ndjson.loads(s)
-                        # print(x)
+                        if verbose:
+                            print(x)
                         sleep(0)
                     except:
                         traceback.print_exc()
@@ -369,7 +374,7 @@ class API:
                         # self.authorization()
                         print(f'WIPING {upload_pid} {self.prefix}{self.table}')
                         db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
-                    self.load_bcp_db()
+                    self.load_bcp_db(_async=True)
         except:
             print('******** ERROR ********')
             traceback.print_exc()
@@ -380,7 +385,6 @@ class API:
     def bulk_reload(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
         print(start)
-        reload_save = reload
         self.table = table
         self.import_file = []
         try:
@@ -641,7 +645,7 @@ def reset_table(tablename):
     return
 
 
-def resync_table(tablename, pids=None):
+def resync_table(tablename, pids=None, verbose=False):
     print(tablename)
     import time
     from API.scheduling import everyhour
@@ -694,22 +698,22 @@ def scheduled(interval=None):
     global current_sync
     error = ''
     from API.scheduling import everyhour
+    ltime = ''
     try:
         everyhour.pause = True
         import time
         start = time.perf_counter()
         if interval:
-            x = arrow.get().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+            ltime = arrow.get().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         elif not last_time_sync:
-            x = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+            ltime = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         else:
-            x = last_time_sync
-        print(x)
-        tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
-        for t in tables:
+            ltime = last_time_sync
+        print(ltime)
+        for t in sync_tables:
             try:
                 print(t)
-                API().load_sync_files(t, start=x)
+                API().load_sync_files(t, start=ltime)
             except:
                 error = traceback.format_exc()
         correct_ids()
@@ -721,24 +725,15 @@ def scheduled(interval=None):
     log(mode='sync', error=error)
     everyhour.pause = False
     current_sync = False
+    _log('scheduled', 'scheduled', str(ltime), 'internal', error)
     return
 
-def log(mode=None, error=''):
-    try:
-        if mode:
-            SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE() AT TIME ZONE 'Central Standard Time', error=? WHERE [mode] = ?"
-            return dbpy.execute(SQL, error, mode)
-        SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log"
-        return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), x[2]) for x in dbpy.fetchall(SQL)]
-
-    except:
-        # traceback.print_exc()
-        pass
 
 def nightly():
     import time
     start = time.perf_counter()
     error = ''
+    _log('nightly', 'nightly', str(start), 'internal', 'started')
     try:
         for table in nightly_tables:
             resync_table(table, pids=None)
@@ -747,7 +742,10 @@ def nightly():
         error = traceback.format_exc()
     log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
+    if error:
+        _log('nightly', 'nightly', str(start), 'internal', error)
     return
+
 
 def reload_file(table):
     v = API()
@@ -757,10 +755,12 @@ def reload_file(table):
     # v.load_bcp_db()
     v.create_indexes()
 
+
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
-    reset_table('providers')
-
-
+    # v.table = 'treatments'
+    # v.filename = 'dbo.vx_treatments-2253.csv'
+    # v.load_bcp_db(_async=False)
+    resync_table('perio_chart', '')
 
