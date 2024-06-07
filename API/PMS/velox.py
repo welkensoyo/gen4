@@ -762,5 +762,5 @@ if __name__ == '__main__':
     # v.table = 'treatments'
     # v.filename = 'dbo.vx_treatments-2253.csv'
     # v.load_bcp_db(_async=False)
-    resync_table('perio_chart', '')
+    resync_table('perio_tooth', '')
 
