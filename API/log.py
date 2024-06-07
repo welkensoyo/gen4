@@ -10,7 +10,7 @@ def log(route, method, payload, code, result):
             dbpy.execute(PSQL, route, method, payload, code, result)
         except:
             db.execute(PSQL, route, method, payload, code, result)
-    spawn(_(route, method, payload, code, result))
+    spawn(_, route, method, payload, code, result)
 
 
 def velox_log(mode=None, error=''):
