@@ -11,17 +11,17 @@ import arrow
 import traceback
 import csv
 import requests
-from API.log import log as _log, velox_log as log
+import time
+from API.log import api_log as _log, velox_log as log
 
-sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
+sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'perio-chart', 'perio-tooth')
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
               'patient_referrals', 'clinical_notes', 'perio_chart', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
-nightly_tables = ('providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes', 'image_metadata',
-                  'clinic', 'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'perio_chart', 'perio_tooth', 'treatment_plan',
-                  'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
+nightly_tables = ('clinic', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes',
+                  'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure', 'image_metadata',)
 
 clinic_ids = {
     '1019': '370',
@@ -459,7 +459,7 @@ class API:
             print('RESETTING TABLE')
             self.create_table()
             self.authorization()
-        self.load_bcp_bulk(_async=True)
+        self.load_bcp_bulk(_async=False)
         self.create_indexes()
 
     def delete_updated(self,ids):
@@ -506,6 +506,7 @@ class API:
             x = j.dc(self.datastream(self.table))
             txt = ''
             if 'properties' in x:
+                _int = {'duration', 'status', 'tx_status','mobility','plaque','bone_loss','pd_mf','pd_cf','pd_df','pd_ml','pd_cl','gm_mf','gm_cf','gm_df','gm_ml','gm_cl','gm_dl','mj_mf','mj_cf','mj_df','mj_ml','mj_cl','mj_dl','fg_mf','fg_cf','fg_df','fg_ml','fg_cl','fg_dl','bleeding_mf','bleeding_cf','bleeding_df','bleeding_ml','bleeding_cl','bleeding_dl','suppuration_mf','suppuration_cf','suppuration_df','suppuration_ml','suppuration_cl','suppuration_dl'}
                 self.drop_table()
                 for col in x['properties']['fields']['items']['enum']:
                     if col == 'id':
@@ -513,14 +514,12 @@ class API:
                         (id bigint, practice_id int, '''
                     elif col in ('_id','referral_date'):
                         txt += f'{col} varchar(255),'
-                    elif col in ('duration', 'status', 'tx_status'):
+                    elif col in _int:
                         txt += f'{col} INT,'
                     elif col in ('plan_id', 'insurance_id', 'guarantor_id', 'provider_id', 'patient_id'):
                         txt += f'{col} BIGINT,'
                     elif col in ('amount','cost','co_pay','bal_30_60','bal_60_90','bal_90_plus'):
-                        txt += f'{col} DECIMAL(19, 4),'
-                    elif col in ('',):
-                        txt += f'{col} DECIMAL(19, 4),'
+                        txt += f'{col} DECIMAL(19, 2),'
                     elif 'date' in col:
                         txt += f'{col} DATETIME2,'
                     elif col in ('dob',):
@@ -730,7 +729,6 @@ def scheduled(interval=None):
 
 
 def nightly():
-    import time
     start = time.perf_counter()
     error = ''
     _log('nightly', 'nightly', str(start), 'internal', 'started')
@@ -759,8 +757,11 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
+    # reset_table('perio_chart')
+    # reset_table('perio_tooth')
+    # nightly()
     # v.table = 'treatments'
     # v.filename = 'dbo.vx_treatments-2253.csv'
     # v.load_bcp_db(_async=False)
-    resync_table('perio_tooth', '')
-
+    # pprint(API().datastream('perio_chart'))
+#

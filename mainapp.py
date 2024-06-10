@@ -6,7 +6,7 @@ import API.njson as json
 from API.render import Render
 from bottle import Bottle, get, request, response, abort, route, error, template, redirect, static_file, hook
 import API.PMS.velox as v
-from API.log import log as _log
+from API.log import api_log as _log
 
 mainappRoute = Bottle()
 

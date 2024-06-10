@@ -1,20 +1,26 @@
-import gevent.socket
 import pyodbc
 import traceback
 import sys
-from API.config import sqlserver
-from API.config import bpk, denticon
-import pandas as pd
+from API.config import sqlserver, port
 
-connection_string = (
-    'DRIVER={ODBC Driver 18 for SQL Server};'
-    f'SERVER={sqlserver.server};'
-    f'DATABASE={sqlserver.database};'
-    f'UID={sqlserver.user};'
-    f'PWD={sqlserver.password};'
-    'TrustServerCertificate=yes;'
-)
-
+if port == 80:
+    connection_string = (
+        'DRIVER={ODBC Driver 18 for SQL Server};'
+        f'SERVER={sqlserver.server};'
+        f'DATABASE={sqlserver.database};'
+        f'UID={sqlserver.user};'
+        f'PWD={sqlserver.password};'
+        'TrustServerCertificate=yes;'
+    )
+else:
+    connection_string = (
+        'DRIVER={ODBC Driver 17 for SQL Server};'
+        f'SERVER={sqlserver.server};'
+        f'DATABASE={sqlserver.database};'
+        f'UID={sqlserver.user};'
+        f'PWD={sqlserver.password};'
+        'TrustServerCertificate=yes;'
+    )
 _conn = None
 
 
