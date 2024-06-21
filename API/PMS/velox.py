@@ -304,12 +304,14 @@ class API:
             return val
         return val
 
-    def clinic_fix(self, l):
+    def clinic_fix(self, line):
         if self.table in list(clinic_position.keys()):
             p = clinic_position[self.table]
-            if str(l[1]) in clinic_ids:
-                l[p] = clinic_ids[str(l[1])]
-        return l
+            if str(line[1]) in clinic_ids:
+                line[p] = clinic_ids[str(line[1])]
+            else:
+                line[p] = 0
+        return line
 
     def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False, verbose=False):
         print('SYNC TMP FILE')
@@ -776,7 +778,7 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
-    resync_table('treatments', '1381', verbose=False)
+    resync_table('treatments', '2253', verbose=False)
 
     # print(API().datastream('treatments'))
     # resync_table('treatments', '2253')
