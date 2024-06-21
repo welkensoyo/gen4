@@ -12,6 +12,7 @@ import traceback
 import csv
 import requests
 import time
+import shutil
 from API.log import api_log as _log, velox_log as log
 
 sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'perio-chart', 'perio-tooth')
@@ -59,6 +60,7 @@ current_sync = False
 class API:
     def __init__(self, qa=False, pids=None):
         self.root = str(Path.home())+'/dataload/'
+        self.backup = str(Path.home())+'/backup/'
         self.prefix = 'dbo.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
@@ -108,6 +110,12 @@ class API:
         cookie = j.dc(r.data.decode())
         self.headers['Cookie'] = f"authToken={cookie['token']}"
         return self
+
+    def backup_file(self):
+        try:
+            shutil.copy(self.root+self.filename, self.backup+self.filename)
+        except:
+            traceback.print_exc()
 
     def insurance_carriers(self): return self.datastream('insurance_carriers')
     def image_metadata(self): return self.datastream('image_metadata')
@@ -402,6 +410,13 @@ class API:
         self.load_bcp_bulk(_async=True)
         self.create_indexes()
 
+    def bulk_bcp_reload(self, table):
+        self.table = table
+        for pid in self.pids:
+            self.filename = f'{self.prefix}{self.table}_{pid}.csv'
+            self.import_file.append(self.filename)
+        self.load_bcp_bulk(_async=False)
+
     def bulk_load(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
         print(start)
@@ -451,6 +466,7 @@ class API:
                                     l[13] = proc_codes.get(int(l[15]), None)
                                 cw.writerow(l)
                                 sleep(0)
+                    self.backup_file()
         except:
             traceback.print_exc()
             sleep(10)
@@ -518,7 +534,7 @@ class API:
                         txt += f'{col} INT,'
                     elif col in ('plan_id', 'insurance_id', 'guarantor_id', 'provider_id', 'patient_id'):
                         txt += f'{col} BIGINT,'
-                    elif col in ('amount','cost','co_pay','bal_30_60','bal_60_90','bal_90_plus'):
+                    elif col in ('amount','cost','co_pay','bal_30_60','bal_60_90','bal_90_plus','tax'):
                         txt += f'{col} DECIMAL(19, 2),'
                     elif 'date' in col:
                         txt += f'{col} DATETIME2,'
@@ -551,14 +567,12 @@ class API:
         ''')
 
         elif self.table == 'treatments':
-            db.execute('''CREATE NONCLUSTERED INDEX [ix_treatments_clinic_id] ON [dbo].[vx_treatments]
-        ([clinic_id] ASC)WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_treatments_completion_date] ON [dbo].[vx_treatments]
-        ( [completion_date] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_treatments_patient_id] ON [dbo].[vx_treatments]
-        ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_treatments_tx_status] ON [dbo].[vx_treatments]
-        ( [tx_status] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+            db.execute('''
+CREATE NONCLUSTERED INDEX [sidx_treatments_practice_provider_clinic] ON [dbo].[vx_treatments] ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_treatments_plan_date] ON [dbo].[vx_treatments] ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_treatments_patient_id] ON [dbo].[vx_treatments] ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_treatments_clinic_id] ON [dbo].[vx_treatments] ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_treatments__deleted_status_completion] ON [dbo].[vx_treatments] ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
 def correct_ids():
@@ -600,6 +614,7 @@ def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
     SQL = f'SELECT TOP 1 {t[table]} FROM dbo.vx_{table} WHERE {t[table]} <= GETDATE() '
     return db.fetchone(SQL)[0]
+
 
 def reset(tables=None, practice=False):
     error = ''
@@ -657,7 +672,9 @@ def resync_table(tablename, pids=None, verbose=False):
         if pids:
             pids = pids.split(',')
             x.pids = pids
-        x.load_sync_files(tablename, reload=True)
+        else:
+            return 'No Practice IDs Provided'
+        x.load_sync_files(tablename, reload=True, verbose=verbose)
         correct_ids_local()
     except:
         error = traceback.format_exc()
@@ -667,6 +684,7 @@ def resync_table(tablename, pids=None, verbose=False):
     global current
     current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
+
 
 def refresh(pids=None):
     import time
@@ -692,6 +710,7 @@ def refresh(pids=None):
     global current
     current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
+
 
 def scheduled(interval=None):
     global current_sync
@@ -757,6 +776,10 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
+    resync_table('treatments', '1381', verbose=False)
+
+    # print(API().datastream('treatments'))
+    # resync_table('treatments', '2253')
     # reset_table('perio_chart')
     # reset_table('perio_tooth')
     # nightly()

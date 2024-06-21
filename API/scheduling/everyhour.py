@@ -12,7 +12,8 @@ def velox_appointments():
     if not pause:
         va = v.API()
         va.practices()
-        va.available_appointments()
+        # va.available_appointments()
+
 def _set():
     schedule.every(15).minutes.do(velox_sync)
     schedule.every(1).hour.do(velox_appointments)

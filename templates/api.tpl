@@ -13,7 +13,7 @@
     <a class="btn btn-primary float-middle" id="pauseb" onclick="unpause()">Un Pause</a>
         </div>
         <div class="col">
-    <a class="btn btn-primary float-end" id="resetb" onclick="reset()">Full Reset</a>
+<!--    <a class="btn btn-primary float-end" id="resetb" onclick="reset()">Full Reset</a>-->
         </div>
     </div>
     <div class="row pt-2">

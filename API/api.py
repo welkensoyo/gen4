@@ -118,8 +118,8 @@ class API:
         if self.option == 'practices':
             return velox.API().practices().get_pids().pids
         elif self.option == 'reset':
-            spawn(velox.reset)
-            return 'Resetting Full Velox Data...'
+            # spawn(velox.reset)
+            return 'No longer supported...'
         elif self.option == 'sync':
             if everyhour.pause:
                 return 'Sync already in progress...'
@@ -132,13 +132,13 @@ class API:
         elif self.option =='resume':
             everyhour.pause = False
         elif self.option == 'fullrefresh':
-            spawn(velox.refresh, self.pl.get('pids'))
-            return 'Full Refresh In Progress...'
+            # spawn(velox.refresh, self.pl.get('pids'))
+            return 'No Longer Supported...'
         elif self.option == 'refresh':
             table = self.option2
             pids = self.pl.get('pids')
             if pids == 'ALL':
-                pids = None
+                return 'Must Provide Practice IDs (could take a while)...'
             spawn(velox.resync_table, table, pids or False)
             return 'Refreshing table: '+table
         return str(everyhour.pause)
