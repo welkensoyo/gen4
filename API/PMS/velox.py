@@ -309,7 +309,7 @@ class API:
             p = clinic_position[self.table]
             if str(line[1]) in clinic_ids:
                 line[p] = clinic_ids[str(line[1])]
-            else:
+            elif not line[p]:
                 line[p] = 0
         return line
 
