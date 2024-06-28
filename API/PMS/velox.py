@@ -313,7 +313,7 @@ class API:
                 line[p] = 0
         return line
 
-    def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False, verbose=False):
+    def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False, verbose=False, _async=True):
         print('SYNC TMP FILE')
         self.table = table
         try:
@@ -325,7 +325,7 @@ class API:
                 if self.table == 'treatments':
                     proc_codes = self.procedure_code_lookup(pid)
                 data_empty = True
-                self.filename = f'{self.prefix}{self.table}-{pid}.csv'
+                self.filename = f'{self.prefix}{self.table}_{pid}.csv'
                 reload = reload_save #this is in case 1400 or 1486 change the reload state
                 global current
                 upload_pid = pid
@@ -384,12 +384,12 @@ class API:
                         # self.authorization()
                         print(f'WIPING {upload_pid} {self.prefix}{self.table}')
                         db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
-                    self.load_bcp_db(_async=True)
+                    self.load_bcp_db(_async=_async)
         except:
             print('******** ERROR ********')
             traceback.print_exc()
             sleep(10)
-            self.load_sync_files(table, start, reload=reload)
+            self.load_sync_files(table, start, reload=reload, verbose=verbose, _async=_async)
 
 
     def bulk_reload(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
@@ -401,7 +401,7 @@ class API:
             print(f'Creating Folder {self.root+self.filename}')
             self.create_folder()
             for pid in self.pids:
-                self.filename = f'{self.prefix}{self.table}_{pid}.csv'
+                self.filename = f'{self.prefix}{self.table}-{pid}.csv'
                 self.import_file.append(self.filename)
                 print(pid)
         except:
@@ -412,12 +412,12 @@ class API:
         self.load_bcp_bulk(_async=True)
         self.create_indexes()
 
-    def bulk_bcp_reload(self, table):
+    def bulk_bcp_reload(self, table, _async=True):
         self.table = table
         for pid in self.pids:
             self.filename = f'{self.prefix}{self.table}_{pid}.csv'
             self.import_file.append(self.filename)
-        self.load_bcp_bulk(_async=False)
+        self.load_bcp_bulk(_async=_async)
 
     def bulk_load(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
@@ -661,7 +661,7 @@ def reset_table(tablename):
     return
 
 
-def resync_table(tablename, pids=None, verbose=False):
+def resync_table(tablename, pids=None, verbose=False, _async=True):
     print(tablename)
     import time
     from API.scheduling import everyhour
@@ -778,8 +778,14 @@ def reload_file(table):
 if __name__ == '__main__':
     from pprint import pprint
     os.chdir('../../')
-    resync_table('treatments', '2253', verbose=False)
-
+    pprint(API().datastream('patients'))
+    # resync_table('treatments', '1720', verbose=False)
+    resync_table('ledger', '1720', verbose=False)
+    resync_table('appointments', '1720', verbose=False)
+    resync_table('patients', '2253', verbose=False)
+    # v = API()
+    # v.pids = [1381]
+    # v.bulk_bcp_reload('ledger', _async=False)
     # print(API().datastream('treatments'))
     # resync_table('treatments', '2253')
     # reset_table('perio_chart')
