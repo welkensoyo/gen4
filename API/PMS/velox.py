@@ -24,6 +24,8 @@ full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers',
 nightly_tables = ('clinic', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes',
                   'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure', 'image_metadata',)
 
+cached_table_defs = {}
+
 clinic_ids = {
     '1019': '370',
     '1020': '438',
@@ -79,6 +81,19 @@ class API:
         self.missing = []
         if not self.pids or pids == 'ALL':
             self.get_pids()
+        self.check_table_sync(None)
+
+    def check_table_sync(self, table):
+        if not table and not cached_table_defs:
+            for each in sync_tables:
+                cached_table_defs[each] = j.dc(self.datastream(each))
+            return True
+        if table:
+            table_def = j.dc(self.datastream(table))
+            if cached_table_defs.get(table) != table_def:
+                cached_table_defs[table] = table_def
+                return False
+        return True
 
     def get_pids(self):
         SQL = f'SELECT id FROM {self.prefix}practices'
@@ -194,59 +209,61 @@ class API:
         SQL = 'SELECT id, code FROM dbo.vx_procedure_codes WHERE practice_id = %s'
         return {p: c for p, c in db.fetchall(SQL, pid)}
 
-    def practices(self):
+    def practices(self, run=True):
         print('PRACTICES')
         error = ''
-        try:
-            txt = ''
-            tablename = 'practices'
-            self.url = f"{self.pre_url}/private/practices"
-            x = j.dc(self.transmit(self.url))
-            print(x)
-            cols = list(x['practices'][0].keys())
-            for col in cols:
-                if col == 'id':
-                    txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
-                        (id bigint, '''
-                elif '_id' in col:
-                    txt += f'{col} varchar(255),'
-                elif col in ('duration', 'status', 'tx_status'):
-                    txt += f'{col} INT,'
-                elif col in ('amount', 'cost', 'co_pay'):
-                    txt += f'{col} DECIMAL(19, 4),'
-                elif col in ('',):
-                    txt += f'{col} DECIMAL(19, 4),'
-                elif 'date' in col:
-                    txt += f'{col} DATETIME2,'
-                elif col in ('dob','last_sync'):
-                    txt += f'{col} DATETIME2,'
-                else:
-                    txt += f'{str(col)} varchar(255),'
-
-            txt = txt + f''' last_updated DATETIME2);'''
-            db.execute(f''' DROP TABLE {self.prefix}{tablename}; ''')
-            print('DROPPED TABLE')
-            db.execute(txt)
-            print('CREATED NEW TABLE')
-            vars = '%s,'*(len(cols)+1)
-            PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
-            rows = []
-            for p in x['practices']:
-                row = []
-                for c in cols:
-                    if p[c]:
-                        row.append(str(p[c]))
+        txt = ''
+        tablename = 'practices'
+        self.url = f"{self.pre_url}/private/practices"
+        x = j.dc(self.transmit(self.url))
+        print(x)
+        cols = list(x['practices'][0].keys())
+        print(cols)
+        if run:
+            try:
+                for col in cols:
+                    if col == 'id':
+                        txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
+                            (id bigint, '''
+                    elif '_id' in col:
+                        txt += f'{col} varchar(255),'
+                    elif col in ('duration', 'status', 'tx_status'):
+                        txt += f'{col} INT,'
+                    elif col in ('amount', 'cost', 'co_pay'):
+                        txt += f'{col} DECIMAL(19, 4),'
+                    elif col in ('',):
+                        txt += f'{col} DECIMAL(19, 4),'
+                    elif 'date' in col:
+                        txt += f'{col} DATETIME2,'
+                    elif col in ('dob','last_sync'):
+                        txt += f'{col} DATETIME2,'
                     else:
-                        row.append(None)
-                row.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
-                print(row)
-                rows.append(tuple(row))
-            rows = tuple(rows)
-            db.executemany(PSQL, rows)
-            db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
-        except:
-            error = traceback.format_exc()
-        log(mode='practices', error=str(error))
+                        txt += f'{str(col)} varchar(255),'
+
+                txt = txt + f''' last_updated DATETIME2);'''
+                db.execute(f''' DROP TABLE {self.prefix}{tablename}; ''')
+                print('DROPPED TABLE')
+                db.execute(txt)
+                print('CREATED NEW TABLE')
+                vars = '%s,'*(len(cols)+1)
+                PSQL = f'INSERT INTO {self.prefix}{tablename} VALUES ({vars[0:-1]})'
+                rows = []
+                for p in x['practices']:
+                    row = []
+                    for c in cols:
+                        if p[c]:
+                            row.append(str(p[c]))
+                        else:
+                            row.append(None)
+                    row.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
+                    print(row)
+                    rows.append(tuple(row))
+                rows = tuple(rows)
+                db.executemany(PSQL, rows)
+                db.execute(f'''CREATE UNIQUE INDEX ux_{tablename}_pid ON {self.prefix}{tablename}  (id) with ignore_dup_key; ''')
+            except:
+                error = traceback.format_exc()
+            log(mode='practices', error=str(error))
         return self
 
     def datastream(self, path):
@@ -313,9 +330,11 @@ class API:
                 line[p] = 0
         return line
 
-    def load_sync_files(self, table, start="2001-01-01T00:00:00.000Z", reload=False, verbose=False, _async=True):
+    def load_sync_files(self, table, start="0001-01-01T00:00:00.000Z", reload=False, verbose=False, _async=True):
         print('SYNC TMP FILE')
         self.table = table
+        if not self.check_table_sync(self.table):
+            return reset_table(self.table)
         try:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
@@ -419,7 +438,7 @@ class API:
             self.import_file.append(self.filename)
         self.load_bcp_bulk(_async=_async)
 
-    def bulk_load(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
+    def bulk_load(self, table, start="0001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
         print(start)
         reload_save = reload
@@ -672,13 +691,14 @@ def resync_table(tablename, pids=None, verbose=False, _async=True):
     try:
         x = API()
         if pids:
-            pids = pids.split(',')
-            x.pids = pids
+            if isinstance(pids, str):
+                pids = pids.split(',')
+                x.pids = pids
         else:
             return 'No Practice IDs Provided'
         x.load_sync_files(tablename, reload=True, verbose=verbose)
-        correct_ids_local()
     except:
+        traceback.print_exc()
         error = traceback.format_exc()
         log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
@@ -752,17 +772,18 @@ def scheduled(interval=None):
 def nightly():
     start = time.perf_counter()
     error = ''
-    _log('nightly', 'nightly', str(start), 'internal', 'started')
+    pids = API().pids
+    _log('nightly', 'nightly', str(start), 0, 'started')
     try:
         for table in nightly_tables:
-            resync_table(table, pids=None)
+            resync_table(table, pids=pids)
     except:
         traceback.print_exc()
         error = traceback.format_exc()
     log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     if error:
-        _log('nightly', 'nightly', str(start), 'internal', error)
+        _log('nightly', 'nightly', str(start), 0, error)
     return
 
 
@@ -772,17 +793,22 @@ def reload_file(table):
     v.filename = f'{v.prefix}{v.table}.csv'
     # v.create_table()
     # v.load_bcp_db()
-    v.create_indexes()
+    # v.create_indexes()
+
+def resync_main(pid):
+    for t in ('treatments', 'ledger', 'appointments', 'patients'):
+        resync_table(t, pid, verbose=False)
 
 
 if __name__ == '__main__':
-    from pprint import pprint
     os.chdir('../../')
-    pprint(API().datastream('patients'))
-    # resync_table('treatments', '1720', verbose=False)
-    resync_table('ledger', '1720', verbose=False)
-    resync_table('appointments', '1720', verbose=False)
-    resync_table('patients', '2253', verbose=False)
+    from pprint import pprint
+    # reset_table('providers')
+    nightly()
+    # reset_table('providers')
+
+    # reset_table('patients')
+    # API().practices()
     # v = API()
     # v.pids = [1381]
     # v.bulk_bcp_reload('ledger', _async=False)

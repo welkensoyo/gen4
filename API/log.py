@@ -6,7 +6,7 @@ import API.dbms as db
 import arrow
 
 def api_log(route, method, payload, code, result):
-    print('api_log', route, method, payload, code, result)
+    # print('api_log', route, method, payload, code, result)
     def _(route, method, payload, code, result):
         PSQL = ''' INSERT INTO dev.api_log (route, method, payload, response_code, response_message) VALUES (?, ?, ?, ?, ?) '''
         dbpy.execute(PSQL, route, method, payload, code, result)
