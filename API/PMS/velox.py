@@ -21,6 +21,7 @@ full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
               'patient_referrals', 'clinical_notes', 'perio_chart', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
+
 nightly_tables = ('clinic', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes',
                   'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure', 'image_metadata',)
 
@@ -87,6 +88,9 @@ class API:
         if not table and not cached_table_defs:
             for each in sync_tables:
                 cached_table_defs[each] = j.dc(self.datastream(each))
+            return True
+        elif not cached_table_defs.get(table):
+            cached_table_defs[table] = j.dc(self.datastream(table))
             return True
         if table:
             table_def = j.dc(self.datastream(table))
