@@ -1,3 +1,6 @@
-import API.PMS.velox as v
+x = 'test'
+y = x+'ing'
 
-print(v.API().practices(run=False))
+y.replace('ing', '')
+
+print(y)
