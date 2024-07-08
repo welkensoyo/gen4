@@ -649,6 +649,7 @@ def correct_ids_local():
     UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
     UPDATE vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
+    UPDATE dbo.vx_providers SET code = pms_id WHERE code IS NULL
     '''
     db.execute(SQL)
     return
