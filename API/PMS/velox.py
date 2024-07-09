@@ -65,6 +65,7 @@ class API:
         self.root = str(Path.home())+'/dataload/'
         self.backup = str(Path.home())+'/backup/'
         self.prefix = 'dbo.vx_'
+        self.staging_prefix = 'dbo.staging_'
         self.db = 'gen4_dw'
         self.filename = ''
         self.table = ''
@@ -85,8 +86,6 @@ class API:
         self.check_table_sync(None)
 
     def check_table_sync(self, tablename):
-        if tablename:
-            tablename = tablename.replace('_restore', '')
         if not tablename and not cached_table_defs:
             for each in sync_tables:
                 cached_table_defs[each] = self.tables(tablename) or j.dc(self.datastream(each))
@@ -103,8 +102,6 @@ class API:
         return True
 
     def tables(self, tablename, meta=None):
-        if tablename:
-            tablename = tablename.replace('_restore', '')
         if meta:
             SQL = '''DELETE FROM dev.api_tables WHERE tablename = %s'''
             db.execute(SQL, tablename)
@@ -443,7 +440,7 @@ class API:
             print(f'Creating Folder {self.root+self.filename}')
             self.create_folder()
             for pid in self.pids:
-                self.filename = f'{self.prefix}{self.table}-{pid}.csv'
+                self.filename = f'{self.table}-{pid}.csv'
                 self.import_file.append(self.filename)
                 print(pid)
         except:
@@ -457,7 +454,7 @@ class API:
     def bulk_bcp_reload(self, table, _async=True):
         self.table = table
         for pid in self.pids:
-            self.filename = f'{self.prefix}{self.table}_{pid}.csv'
+            self.filename = f'{self.table}_{pid}.csv'
             self.import_file.append(self.filename)
         self.load_bcp_bulk(_async=_async)
 
@@ -465,7 +462,7 @@ class API:
         print('LOAD TMP FILE')
         print(start)
         reload_save = reload
-        self.table = table+'_restore'
+        self.table = table
         print(self.table)
         self.import_file = []
         try:
@@ -473,7 +470,7 @@ class API:
             self.create_folder()
             for pid in self.pids:
                 print(pid)
-                self.filename = f'{self.prefix}{self.table}_{pid}.csv'
+                self.filename = f'{self.table}_{pid}.csv'
                 self.import_file.append(self.filename)
                 proc_codes = None
                 if 'treatments' in self.table:
@@ -532,8 +529,9 @@ class API:
         if table:
             self.table = table
         if not self.filename:
-            self.filename = f'{self.prefix}{self.table}.csv'
+            self.filename = f'{self.table}.csv'
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
+        # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if _async:
             os.popen(bcp)
         else:
@@ -551,9 +549,12 @@ class API:
         if not isExist:
             os.makedirs(p)
 
-    def drop_table(self):
-        print(f'DROPPING TABLE {self.prefix}{self.table}')
-        PSQL = f''' DROP TABLE IF EXISTS {self.prefix}{self.table}; '''
+    def drop_table(self, staging=False):
+        prefix = self.prefix
+        if staging:
+            prefix = self.staging_prefix
+        print(f'DROPPING TABLE {prefix}{self.table}')
+        PSQL = f''' DROP TABLE IF EXISTS {prefix}{self.table}; '''
         db.execute(PSQL)
         return self
 
@@ -561,17 +562,19 @@ class API:
         os.remove(self.filename)
         return self
 
-    def create_table(self):
+    def create_table(self, staging=False):
+        prefix = self.prefix
+        if staging:
+            prefix = self.staging_prefix
         try:
-            x = j.dc(self.datastream(self.table.replace('_restore', '')))
-            self.table = self.table+'_restore'
+            x = j.dc(self.datastream(self.table))
             txt = ''
             if 'properties' in x:
                 _int = {'duration', 'status', 'tx_status','mobility','plaque','bone_loss','pd_mf','pd_cf','pd_df','pd_ml','pd_cl','gm_mf','gm_cf','gm_df','gm_ml','gm_cl','gm_dl','mj_mf','mj_cf','mj_df','mj_ml','mj_cl','mj_dl','fg_mf','fg_cf','fg_df','fg_ml','fg_cl','fg_dl','bleeding_mf','bleeding_cf','bleeding_df','bleeding_ml','bleeding_cl','bleeding_dl','suppuration_mf','suppuration_cf','suppuration_df','suppuration_ml','suppuration_cl','suppuration_dl'}
                 self.drop_table()
                 for col in x['properties']['fields']['items']['enum']:
                     if col == 'id':
-                        txt = f'''CREATE TABLE {self.prefix}{self.table} 
+                        txt = f'''CREATE TABLE {prefix}{self.table} 
                         (id bigint, practice_id int, '''
                     elif col in ('_id','referral_date'):
                         txt += f'{col} varchar(255),'
@@ -597,26 +600,29 @@ class API:
         return self
 
 
-    def create_indexes(self):
+    def create_indexes(self, staging=False):
+        prefix = self.prefix
+        if staging:
+            prefix = self.staging_prefix
         now = arrow.now().format('YYYY_MM_DD')
-        table = self.table.replace('_restore','_'+now)
-        db.execute(f'''CREATE UNIQUE CLUSTERED INDEX ux_{table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
+        table = self.table+'_'+now
+        db.execute(f'''CREATE UNIQUE CLUSTERED INDEX ux_{table}_pid ON {prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
         if 'appointments' in table:
-            db.execute(f'''CREATE INDEX ix_{table}_clinic_id ON {self.prefix}{self.table}  (clinic_id, practice_id); ''')
+            db.execute(f'''CREATE INDEX ix_{table}_clinic_id ON {prefix}{self.table}  (clinic_id, practice_id); ''')
         elif 'ledger' in table:
-            db.execute(f'''CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON [dbo].[vx_{self.table}] ( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_vx_{table}_patient_id] ON [dbo].[vx_{self.table}] ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_vx_{table}_payment_class] ON [dbo].[vx_{self.table}] ( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_vx_{table}_practice_id] ON [dbo].[vx_{self.table}] ( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+            db.execute(f'''CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {prefix}{self.table} ( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_{table}_patient_id] ON {prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_{table}_payment_class] ON {prefix}{self.table} ( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_{table}_practice_id] ON {prefix}{self.table} ( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
         elif 'treatments' in table:
             db.execute(f'''
-CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {self.prefix}.[vx_{self.table}] ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_plan_date] ON {self.prefix}.[vx_{self.table}] ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_patient_id] ON {self.prefix}.[vx_{self.table}] ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {self.prefix}.[vx_{self.table}] ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {self.prefix}.[vx_{self.table}] ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {prefix}.[vx_{self.table}] ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_plan_date] ON {prefix}.[vx_{self.table}] ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_patient_id] ON {prefix}.[vx_{self.table}] ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {prefix}.[vx_{self.table}] ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {prefix}.[vx_{self.table}] ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
 def correct_ids():
@@ -640,16 +646,20 @@ def schema():
     for each in full_tables:
         print(v.datastream(each))
 
-def correct_ids_local():
+def correct_ids_local(staging=False):
+    prefix = 'dbo.vx_'
+    if staging:
+        prefix = 'staging.vx_'
+
     print("Correcting IDs")
 
-    SQL = '''
-    UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
-    UPDATE dbo.vx_providers SET code = pms_id WHERE code IS NULL
+    SQL = f'''
+    UPDATE {prefix}ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
+    UPDATE {prefix}providers SET code = pms_id WHERE code IS NULL
     '''
     db.execute(SQL)
     return
@@ -703,8 +713,7 @@ def reset_table(tablename):
     print(f'IT TOOK: {time.perf_counter() - start}')
     while current_sync:
         sleep(5)
-    db.execute(''' DROP TABLE dbo.vx_{tablename}; '''.format(tablename=tablename))
-    db.execute(''' EXEC sp_rename 'dbo.vx_{tablename}_restore', 'vx_{tablename}'; '''.format(tablename=tablename))
+    db.execute(''' DROP TABLE staging.vx_{tablename}; '''.format(tablename=tablename))
     return
 
 
@@ -835,11 +844,18 @@ def fix_clinic_ids():
             SQL = ''' UPDATE dbo.vx_{table} SET clinic_id = '{id}' WHERE practice_id = '{practice}' AND (clinic_id = '0' or clinic_id is null) '''.format(table=table, practice=practice, id=id)
             print(db.execute(SQL))
 
+def create_staging():
+    for table in ('treatments', 'procedure_codes'):
+        print(table)
+        x = API()
+        x.table = table
+        x.create_table()
+        # x.create_indexes()
 
 if __name__ == '__main__':
     os.chdir('../../')
     from pprint import pprint
-    reset_table('referral_sources')
+    reset_table('treatments')
     # resync_table('treatments','1396', _async=False)
     # reset_table('patients')
     # API().practices()

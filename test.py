@@ -1,6 +1,2 @@
-x = 'test'
-y = x+'ing'
-
-y.replace('ing', '')
-
-print(y)
+from API.PMS import velox
+velox.reset_table('ledger')
