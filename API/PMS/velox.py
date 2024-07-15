@@ -65,7 +65,7 @@ class API:
         self.root = str(Path.home())+'/dataload/'
         self.backup = str(Path.home())+'/backup/'
         self.prefix = 'dbo.vx_'
-        self.staging_prefix = 'dbo.staging_'
+        self.staging_prefix = 'staging.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
         self.table = ''
@@ -84,6 +84,7 @@ class API:
         if not self.pids or pids == 'ALL':
             self.get_pids()
         self.check_table_sync(None)
+        self.staging_mode = False
 
     def check_table_sync(self, tablename):
         if not tablename and not cached_table_defs:
@@ -416,13 +417,21 @@ class API:
                                 sleep(0)
                             if ids_to_delete and not reload:
                                 print(f'UPDATING {len(ids_to_delete)}')
-                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
+                                if not self.staging_mode:
+                                    db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
+                                else:
+                                    db.execute(f'''DELETE FROM {self.staging_prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
+                                    db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                             else:
                                 self.missing.append(pid)
                     if reload and not data_empty:
                         # self.authorization()
-                        print(f'WIPING {upload_pid} {self.prefix}{self.table}')
-                        db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
+                        print(f'WIPING {upload_pid} {self.table}')
+                        if not self.staging_mode:
+                            db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
+                        else:
+                            db.execute(f'''DELETE FROM {self.staging_prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
+                            db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                     self.load_bcp_db(_async=_async)
         except:
             print('******** ERROR ********')
@@ -485,14 +494,14 @@ class API:
                     "data_to_fetch": {
                         f"{table}": {"records_per_entity": 5000}
                     }}
-                for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
-                    try:
-                        x = ndjson.loads(s)
-                        sleep(0)
-                    except:
-                        break
-                    with open(self.root + self.filename, 'w', newline='') as f:
-                        cw = csv.writer(f, delimiter='|', lineterminator='\n')
+                with open(self.root + self.filename, 'w', newline='') as f:
+                    cw = csv.writer(f, delimiter='|', lineterminator='\n')
+                    for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
+                        try:
+                            x = ndjson.loads(s)
+                            sleep(0)
+                        except:
+                            break
                         for p in x:
                             for i in p.get('data', []):
                                 # print(i)
@@ -508,7 +517,7 @@ class API:
                                     l[13] = proc_codes.get(int(l[15]), None)
                                 cw.writerow(l)
                                 sleep(0)
-                    self.backup_file()
+                self.backup_file()
         except:
             traceback.print_exc()
             sleep(10)
@@ -530,8 +539,9 @@ class API:
             self.table = table
         if not self.filename:
             self.filename = f'{self.table}.csv'
-        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
-        # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
+        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 20000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
+        if self.staging_mode:
+            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if _async:
             os.popen(bcp)
         else:
@@ -549,9 +559,9 @@ class API:
         if not isExist:
             os.makedirs(p)
 
-    def drop_table(self, staging=False):
+    def drop_table(self):
         prefix = self.prefix
-        if staging:
+        if self.staging_mode:
             prefix = self.staging_prefix
         print(f'DROPPING TABLE {prefix}{self.table}')
         PSQL = f''' DROP TABLE IF EXISTS {prefix}{self.table}; '''
@@ -562,9 +572,9 @@ class API:
         os.remove(self.filename)
         return self
 
-    def create_table(self, staging=False):
+    def create_table(self):
         prefix = self.prefix
-        if staging:
+        if self.staging_mode:
             prefix = self.staging_prefix
         try:
             x = j.dc(self.datastream(self.table))
@@ -599,10 +609,17 @@ class API:
             pass
         return self
 
+    def check_for_missing_records(self):
+        problems = db.fetchall(f'''SELECT id, practice_id, count, table_name, last_updated, diff FROM staging.sync_record_check ''')
+        for problem in problems:
+            _log('check_for_missing_records', 'SCHED-5AM', ','.join(problem), 0, 'started')
+            resync_table(problem[3], pids=problem[1], _async=True)
+            _log('check_for_missing_records', 'SCHED-5AM', str(problem[5]), 0, 'completed')
+        return self
 
-    def create_indexes(self, staging=False):
+    def create_indexes(self):
         prefix = self.prefix
-        if staging:
+        if self.staging_mode:
             prefix = self.staging_prefix
         now = arrow.now().format('YYYY_MM_DD')
         table = self.table+'_'+now
@@ -618,11 +635,11 @@ class API:
 
         elif 'treatments' in table:
             db.execute(f'''
-CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {prefix}.[vx_{self.table}] ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_plan_date] ON {prefix}.[vx_{self.table}] ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_patient_id] ON {prefix}.[vx_{self.table}] ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {prefix}.[vx_{self.table}] ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {prefix}.[vx_{self.table}] ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {prefix}{self.table} ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_plan_date] ON {prefix}{self.table} ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_patient_id] ON {prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {prefix}{self.table} ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {prefix}{self.table} ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
 def correct_ids():
@@ -641,12 +658,13 @@ def correct_ids():
     current = 'No sync in progress...'
     return
 
+
 def schema():
     v = API()
     for each in full_tables:
         print(v.datastream(each))
 
-def correct_ids_local(staging=False):
+def correct_ids_local(staging=True):
     prefix = 'dbo.vx_'
     if staging:
         prefix = 'staging.vx_'
@@ -731,6 +749,8 @@ def resync_table(tablename, pids=None, verbose=False, _async=True):
             if isinstance(pids, str):
                 pids = pids.split(',')
                 x.pids = pids
+            elif isinstance(pids, (list,tuple)):
+                x.pids = pids
         else:
             return 'No Practice IDs Provided'
         x.load_sync_files(tablename, reload=True, verbose=verbose, _async=_async)
@@ -785,7 +805,7 @@ def scheduled(interval=None):
         elif not last_time_sync:
             ltime = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         else:
-            ltime = last_time_sync
+            ltime = arrow.get(last_time_sync).shift(minutes=-int(3)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         print(ltime)
         for t in sync_tables:
             try:
@@ -810,17 +830,17 @@ def nightly():
     start = time.perf_counter()
     error = ''
     pids = API().pids
-    _log('nightly', 'nightly', str(start), 0, 'started')
+    _log('nightly', 'SCHEDULED', ','.join(pids), 0, 'started')
     try:
         for table in nightly_tables:
             resync_table(table, pids=pids)
     except:
-        traceback.print_exc()
+        # traceback.print_exc()
         error = traceback.format_exc()
     log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     if error:
-        _log('nightly', 'nightly', str(start), 0, error)
+        _log('nightly', 'SCHEDULED', str(time.perf_counter() - start), 0, error)
     return
 
 
@@ -845,29 +865,38 @@ def fix_clinic_ids():
             print(db.execute(SQL))
 
 def create_staging():
-    for table in ('treatments', 'procedure_codes'):
+    for table in sync_tables:
         print(table)
         x = API()
         x.table = table
         x.create_table()
         # x.create_indexes()
 
+def check_for_missing_records():
+    for table in sync_tables:
+        print(table)
+        x = API()
+        x.table = table
+        x.check_for_missing_records()
+
+
+
+def schedule_pid(interval, table, pid):
+    ltime = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+    if interval:
+        ltime = arrow.get().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+    print(ltime)
+    print(table)
+    v = API()
+    v.pids = [pid]
+    v.load_sync_files(table, start=ltime)
+    return
+
+
+
 if __name__ == '__main__':
     os.chdir('../../')
-    from pprint import pprint
-    reset_table('treatments')
-    # resync_table('treatments','1396', _async=False)
-    # reset_table('patients')
-    # API().practices()
-    # v = API()
-    # v.pids = [1381]
-    # v.bulk_bcp_reload('ledger', _async=False)
-    # print(API().datastream('treatments'))
-    # resync_table('treatments', '2253')
-    # reset_table('perio_chart')
-    # nightly()
-    # v.table = 'treatments'
-    # v.filename = 'dbo.vx_treatments-2253.csv'
-    # v.load_bcp_db(_async=False)
-    # pprint(API().datastream('perio_chart'))
+
+    resync_table('ledger', pids='1606', _async=False)
+
 

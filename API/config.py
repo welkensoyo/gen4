@@ -18,6 +18,11 @@ beakerconfig = {
     'session.timeout': 2592000
 }
 
+sharepoint = {
+    'client_id': 'SNL8Q~iwt3j4hXgxf4Uu9d2XQ50_gfHOZQz39aMC',
+    'client_secret': '7d32fb90-ed70-44df-98af-6822b05e7ed2'
+}
+
 SALT = 'jfsdjhfs@7ff44oij8gl.nmaprfeffr'
 compress = True
 admins = [
