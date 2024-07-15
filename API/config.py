@@ -18,8 +18,8 @@ beakerconfig = {
     'session.timeout': 2592000
 }
 
-sharepoint = {
-    'client_id': 'SNL8Q~iwt3j4hXgxf4Uu9d2XQ50_gfHOZQz39aMC',
+spoint = {
+    'id': 'SNL8Q~iwt3j4hXgxf4Uu9d2XQ50_gfHOZQz39aMC',
     'client_s': '7d32fb90-ed70-44df-98af-6822b05e7ed2'
 }
 
