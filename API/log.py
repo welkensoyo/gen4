@@ -1,8 +1,5 @@
-import traceback
-from API.config import port
 from gevent import spawn
 import API.dbpyodbc as dbpy
-import API.dbms as db
 import arrow
 
 def api_log(route, method, payload, code, result):

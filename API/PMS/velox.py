@@ -822,7 +822,7 @@ def scheduled(interval=None):
     log(mode='sync', error=error)
     everyhour.pause = False
     current_sync = False
-    _log('scheduled', 'scheduled', str(ltime), 'internal', error)
+    # _log('scheduled', 'scheduled', str(ltime), 0, error)
     return
 
 
@@ -897,6 +897,6 @@ def schedule_pid(interval, table, pid):
 if __name__ == '__main__':
     os.chdir('../../')
 
-    resync_table('ledger', pids='1606', _async=False)
+    resync_table('treatments', pids='1606', _async=False)
 
 
