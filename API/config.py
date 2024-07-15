@@ -18,9 +18,9 @@ beakerconfig = {
     'session.timeout': 2592000
 }
 
-spoint = {
-    'id': 'U05MOFF-aXd0M2o0aFhneGY0VXU5ZDJYUTUwX2dmSE9aUXozOWFNQw==',
-    'client_s': 'N2QzMmZiOTAtZWQ3MC00NGRmLTk4YWYtNjgyMmIwNWU3ZWQy'
+sharepoint = {
+    'id': 'SNL8Q~iwt3j4hXgxf4Uu9d2XQ50_gfHOZQz39aMC',
+    'client_s': '7d32fb90-ed70-44df-98af-6822b05e7ed2'
 }
 
 SALT = 'jfsdjhfs@7ff44oij8gl.nmaprfeffr'
