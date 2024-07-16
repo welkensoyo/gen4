@@ -6,7 +6,6 @@ import urllib3
 import API.njson as j
 import ndjson
 import API.dbms as db
-import API.dbpyodbc as dbpy
 import arrow
 import traceback
 import csv
@@ -84,7 +83,7 @@ class API:
         if not self.pids or pids == 'ALL':
             self.get_pids()
         self.check_table_sync(None)
-        self.staging_mode = False
+        self.staging_mode = True
 
     def check_table_sync(self, tablename):
         if not tablename and not cached_table_defs:
@@ -355,7 +354,8 @@ class API:
         print('SYNC TMP FILE')
         self.table = table
         if not self.check_table_sync(self.table):
-            return reset_table(self.table)
+            if self.table not in sync_tables:
+                return reset_table(self.table)
         try:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
@@ -725,13 +725,14 @@ def reset_table(tablename):
     # print('Updating practices')
     # API().practices()
     x = API()
+    x.prefix = 'dbo.restore_'
     x.bulk_load(tablename, reload=True)
     print(x.missing)
     correct_ids()
     print(f'IT TOOK: {time.perf_counter() - start}')
     while current_sync:
         sleep(5)
-    db.execute(''' DROP TABLE staging.vx_{tablename}; '''.format(tablename=tablename))
+    # db.execute(''' DROP TABLE staging.vx_{tablename}; '''.format(tablename=tablename))
     return
 
 
@@ -896,7 +897,6 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-
     resync_table('treatments', pids='1606', _async=False)
 
 

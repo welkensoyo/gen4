@@ -34,3 +34,4 @@ pandas-gbq
 matplotlib
 ndjson
 pyodbc
+office365
