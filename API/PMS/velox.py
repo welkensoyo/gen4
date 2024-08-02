@@ -811,7 +811,7 @@ def scheduled(interval=None):
         for t in sync_tables:
             try:
                 print(t)
-                API().load_sync_files(t, start=ltime, _async=False)
+                API().load_sync_files(t, start=ltime, _async=True)
             except:
                 error = traceback.format_exc()
         correct_ids()
