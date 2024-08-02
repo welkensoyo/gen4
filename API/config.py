@@ -19,12 +19,14 @@ beakerconfig = {
 }
 
 sharepoint = {
-    'client_id': 'SNL8Q~iwt3j4hXgxf4Uu9d2XQ50_gfHOZQz39aMC',
-    'client_secret': '7d32fb90-ed70-44df-98af-6822b05e7ed2'
+    'client_secret': 'SNL8Q~iwt3j4hXgxf4Uu9d2XQ50_gfHOZQz39aMC',
+    # 'client_secret': '7d32fb90-ed70-44df-98af-6822b05e7ed2',
+    'client_id': '838a7704-7ed7-4a2e-bc2f-f5c1bbc6ecb9',
+    # 'client_id': '7d32fb90-ed70-44df-98af-6822b05e7ed2'
 }
 sharepoint_pages = SimpleNamespace(
     data='https://gen4.sharepoint.com/sites/DataTeam',
-    rcm='https://gen4.sharepoint.com/sites/SDB-RevenueCycleTeam-SDB-RC-PaymentPostingDailyReconciliation'
+    rcm='https://gen4partners.sharepoint.com/sites/RevenueCycle'
 )
 SALT = 'jfsdjhfs@7ff44oij8gl.nmaprfeffr'
 compress = True

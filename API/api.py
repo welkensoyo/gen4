@@ -138,8 +138,8 @@ class API:
             table = self.option2
             pids = self.pl.get('pids')
             if pids == 'ALL':
-                return 'Must Provide Practice IDs (could take a while)...'
-            spawn(velox.resync_table, table, pids or False)
+                return 'Must Provide Practice IDs (action is canceled)...'
+            spawn(velox.resync_table, table, pids)
             return 'Refreshing table: '+table
         return str(everyhour.pause)
 

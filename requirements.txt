@@ -34,4 +34,7 @@ pandas-gbq
 matplotlib
 ndjson
 pyodbc
+office365-rest-python-client
 office365
+openpyxl
+xlrd

@@ -60,7 +60,7 @@ last_time_sync = None
 current_sync = False
 
 class API:
-    def __init__(self, qa=False, pids=None):
+    def __init__(self, qa=False, pids=None, staging=True):
         self.root = str(Path.home())+'/dataload/'
         self.backup = str(Path.home())+'/backup/'
         self.prefix = 'dbo.vx_'
@@ -83,7 +83,7 @@ class API:
         if not self.pids or pids == 'ALL':
             self.get_pids()
         self.check_table_sync(None)
-        self.staging_mode = True
+        self.staging_mode = staging
 
     def check_table_sync(self, tablename):
         if not tablename and not cached_table_defs:
@@ -352,6 +352,7 @@ class API:
 
     def load_sync_files(self, table, start="0001-01-01T00:00:00.000Z", reload=False, verbose=False, _async=True):
         print('SYNC TMP FILE')
+        global current
         self.table = table
         if not self.check_table_sync(self.table):
             if self.table not in sync_tables:
@@ -367,7 +368,6 @@ class API:
                 data_empty = True
                 self.filename = f'{self.prefix}{self.table}_{pid}.csv'
                 reload = reload_save #this is in case 1400 or 1486 change the reload state
-                global current
                 upload_pid = pid
                 print(pid)
                 current = f'Syncing {pid} - {table}...'
@@ -541,6 +541,7 @@ class API:
             self.filename = f'{self.table}.csv'
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 20000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if self.staging_mode:
+            # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
             bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if _async:
             os.popen(bcp)
@@ -725,7 +726,6 @@ def reset_table(tablename):
     # print('Updating practices')
     # API().practices()
     x = API()
-    x.prefix = 'dbo.restore_'
     x.bulk_load(tablename, reload=True)
     print(x.missing)
     correct_ids()
@@ -752,7 +752,7 @@ def resync_table(tablename, pids=None, verbose=False, _async=True):
                 x.pids = pids
             elif isinstance(pids, (list,tuple)):
                 x.pids = pids
-        else:
+        elif not x.staging_mode:
             return 'No Practice IDs Provided'
         x.load_sync_files(tablename, reload=True, verbose=verbose, _async=_async)
     except:
@@ -811,7 +811,7 @@ def scheduled(interval=None):
         for t in sync_tables:
             try:
                 print(t)
-                API().load_sync_files(t, start=ltime)
+                API().load_sync_files(t, start=ltime, _async=False)
             except:
                 error = traceback.format_exc()
         correct_ids()
@@ -854,8 +854,8 @@ def reload_file(table):
     # v.create_indexes()
 
 def resync_main(pid):
-    for t in ('treatments', 'ledger', 'appointments', 'patients'):
-        resync_table(t, pid, verbose=False)
+    for t in ('providers','treatments', 'ledger', 'appointments', 'patients'):
+        resync_table(t, pid, verbose=False, _async=True)
 
 def fix_clinic_ids():
     for table in ('treatments', 'ledger', 'appointments', 'patients'):
@@ -881,7 +881,6 @@ def check_for_missing_records():
         x.check_for_missing_records()
 
 
-
 def schedule_pid(interval, table, pid):
     ltime = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
     if interval:
@@ -897,6 +896,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    resync_table('treatments', pids='1606', _async=False)
-
-
+    resync_main('1442')

@@ -1,5 +1,5 @@
 import traceback
-from API.config import sharepoint_pages
+from API.config import sharepoint_pages, sharepoint as cert_credentials
 from office365.runtime.auth.authentication_context import AuthenticationContext
 # from office365.runtime.auth.client_credential import ClientCredential
 from office365.sharepoint.client_context import ClientContext
@@ -15,12 +15,6 @@ from API.cache import sync, retrieve
 # auth_url = 'https://login.microsoftonline.com/sdbrands'
 # folder_url_shrpt = '/personal/derek_bartron_sdbmail_com/'
 
-cert_credentials = {
-    # "tenant": 'e44873dc-54c1-425a-8c70-6bd6ee571de4',
-    "client_id": '5c7acc8b-fb8f-4b67-b3b8-62d4302df178',
-    "client_secret": 'M6i8Q~emHPIeB~R9p5BNIFwAm~3ZWqYEvbEWFaXI'
-}
-
 
 class API:
     def __init__(self, url):
@@ -32,8 +26,8 @@ class API:
         self.web = self.ctx.web
         self.ctx.load(self.web)
         self.ctx.execute_query()
-        self.temproot = 'c:\data\\'
-        self.table = 'sdb-prod-sqldb01.dbo.rcm_weekly'
+        self.temproot = '\\home\\dataload\\'
+        self.table = 'cached.rcm_weekly'
         self.current_year = arrow.get().format('YYYY')
         self.filepath = None
         self.cwalk = {}
@@ -280,7 +274,8 @@ def crosswalk():
 if __name__ == '__main__':
     from time import time, perf_counter
     from pprint import pprint
-    API(sharepoint_pages.recon).parse_reconciliation('Shared Documents', refresh=False)
+    x = API(sharepoint_pages.rcm).folders('Shared Documents', recursive=True)
+    pprint(x)
     # a = API(sharepoint_pages.terminated)
     # print(a.get_list('Terminated Users'))
 
