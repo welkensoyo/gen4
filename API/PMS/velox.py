@@ -68,6 +68,7 @@ class API:
         self.db = 'gen4_dw'
         self.filename = ''
         self.table = ''
+        self.pid = ''
         self.url = ''
         self.import_file = []
         self.pre_url = 'https://ds-prod.tx24sevendev.com/v1'
@@ -84,6 +85,13 @@ class API:
             self.get_pids()
         self.check_table_sync(None)
         self.staging_mode = staging
+        if self.staging_mode:
+            self.prefix = self.staging_prefix
+
+    def authorization(self):
+        self.headers = {
+            'Cookie': 'authToken=###########'
+        }
 
     def check_table_sync(self, tablename):
         if not tablename and not cached_table_defs:
@@ -221,12 +229,12 @@ class API:
                         #         print('writing row {}'.format(count))
                         #         cw.writerow((count, pid, category, tslot.format('YYYY-MM-DD HH:mm:ss'), p['id'], p['name'], p['pms_id']))
                 # print(result)
-        db.execute('TRUNCATE TABLE dbo.vx_available_appointments')
+        db.execute('TRUNCATE TABLE staging.vx_available_appointments')
         self.load_bcp_db(_async=False)
         return self
 
     def procedure_code_lookup(self, pid):
-        SQL = 'SELECT id, code FROM dbo.vx_procedure_codes WHERE practice_id = %s'
+        SQL = 'SELECT id, code FROM velox.vx_procedure_codes WHERE practice_id = %s'
         return {p: c for p, c in db.fetchall(SQL, pid)}
 
     def practices(self, run=True):
@@ -362,6 +370,7 @@ class API:
             self.create_folder()
             reload_save = reload
             for pid in self.pids:
+                self.pid = pid
                 proc_codes = None
                 if self.table == 'treatments':
                     proc_codes = self.procedure_code_lookup(pid)
@@ -419,20 +428,13 @@ class API:
                                 sleep(0)
                             if ids_to_delete and not reload:
                                 print(f'UPDATING {len(ids_to_delete)}')
-                                if not self.staging_mode:
-                                    db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
-                                else:
-                                    db.execute(f'''DELETE FROM {self.staging_prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
-                                    # db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
+                                db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                             else:
                                 self.missing.append(pid)
                     if reload and not data_empty:
                         # self.authorization()
                         print(f'WIPING {upload_pid} {self.table}')
-                        if not self.staging_mode:
-                            db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
-                        else:
-                            db.execute(f'''DELETE FROM {self.staging_prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
+                        db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                             # db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                     self.load_bcp_db(_async=_async)
         except:
@@ -541,9 +543,9 @@ class API:
             self.table = table
         if not self.filename:
             self.filename = f'{self.table}.csv'
-        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 20000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
+        bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 20000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}{self.pid}_error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if self.staging_mode:
-            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
+            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}{self.pid}_staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
             # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if _async:
             os.popen(bcp)
@@ -563,11 +565,8 @@ class API:
             os.makedirs(p)
 
     def drop_table(self):
-        prefix = self.prefix
-        if self.staging_mode:
-            prefix = self.staging_prefix
-        print(f'DROPPING TABLE {prefix}{self.table}')
-        PSQL = f''' DROP TABLE IF EXISTS {prefix}{self.table}; '''
+        print(f'DROPPING TABLE {self.prefix}{self.table}')
+        PSQL = f''' DROP TABLE IF EXISTS {self.prefix}{self.table}; '''
         db.execute(PSQL)
         return self
 
@@ -576,9 +575,6 @@ class API:
         return self
 
     def create_table(self):
-        prefix = self.prefix
-        if self.staging_mode:
-            prefix = self.staging_prefix
         try:
             x = j.dc(self.datastream(self.table))
             txt = ''
@@ -587,7 +583,7 @@ class API:
                 self.drop_table()
                 for col in x['properties']['fields']['items']['enum']:
                     if col == 'id':
-                        txt = f'''CREATE TABLE {prefix}{self.table} 
+                        txt = f'''CREATE TABLE {self.prefix}{self.table} 
                         (id bigint, practice_id int, '''
                     elif col in ('_id','referral_date'):
                         txt += f'{col} varchar(255),'
@@ -621,40 +617,37 @@ class API:
         return self
 
     def create_indexes(self):
-        prefix = self.prefix
-        if self.staging_mode:
-            prefix = self.staging_prefix
         now = arrow.now().format('YYYY_MM_DD')
         table = self.table+'_'+now
-        db.execute(f'''CREATE UNIQUE CLUSTERED INDEX ux_{table}_pid ON {prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
+        db.execute(f'''CREATE UNIQUE CLUSTERED INDEX ux_{table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
         if 'appointments' in table:
-            db.execute(f'''CREATE INDEX ix_{table}_clinic_id ON {prefix}{self.table}  (clinic_id, practice_id); ''')
+            db.execute(f'''CREATE INDEX ix_{table}_clinic_id ON {self.prefix}{self.table}  (clinic_id, practice_id); ''')
         elif 'ledger' in table:
-            db.execute(f'''CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {prefix}{self.table} ( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_vx_{table}_patient_id] ON {prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_vx_{table}_payment_class] ON {prefix}{self.table} ( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_vx_{table}_practice_id] ON {prefix}{self.table} ( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+            db.execute(f'''CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {self.prefix}{self.table} ( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_{table}_patient_id] ON {self.prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_{table}_payment_class] ON {self.prefix}{self.table} ( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_{table}_practice_id] ON {self.prefix}{self.table} ( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
         elif 'treatments' in table:
             db.execute(f'''
-CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {prefix}{self.table} ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_plan_date] ON {prefix}{self.table} ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_patient_id] ON {prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {prefix}{self.table} ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {prefix}{self.table} ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {self.prefix}{self.table} ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_plan_date] ON {self.prefix}{self.table} ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_patient_id] ON {self.prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {self.prefix}{self.table} ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {self.prefix}{self.table} ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
 def correct_ids():
     print("Correcting IDs")
 
     SQL = '''
-    UPDATE dbo.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE dbo.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE dbo.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE dbo.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE t set t.code = p.code from vx_treatments as t inner join vx_procedure_codes p on p.id = t.procedure_id and p.practice_id = t.practice_id WHERE t.code IS NULL;
-    UPDATE dbo.vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
+    UPDATE staging.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE staging.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE staging.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE staging.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE t set t.code = p.code from staging.vx_treatments as t inner join staging.vx_procedure_codes p on p.id = t.procedure_id and p.practice_id = t.practice_id WHERE t.code IS NULL;
+    UPDATE staging.vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
     '''
     spawn(db.execute, SQL)
     global current
@@ -732,8 +725,6 @@ def reset_table(tablename):
     print(x.missing)
     correct_ids()
     print(f'IT TOOK: {time.perf_counter() - start}')
-    while current_sync:
-        sleep(5)
     # db.execute(''' DROP TABLE staging.vx_{tablename}; '''.format(tablename=tablename))
     return
 
@@ -895,7 +886,9 @@ def schedule_pid(interval, table, pid):
     return
 
 
-
 if __name__ == '__main__':
     os.chdir('../../')
-    scheduled('24')
+    for each in nightly_tables:
+        print(each)
+        db.execute(f'ALTER SCHEMA velox TRANSFER dbo.vx_{each}')
+        db.execute(f'CREATE VIEW dbo.vx_{each} AS SELECT * FROM velox.vx_{each}')
