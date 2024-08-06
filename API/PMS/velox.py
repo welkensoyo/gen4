@@ -14,14 +14,14 @@ import time
 import shutil
 from API.log import api_log as _log, velox_log as log
 
-sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'perio_chart', 'perio_tooth')
+sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
               'patient_referrals', 'clinical_notes', 'perio_chart', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
 
-nightly_tables = ('clinic', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes',
+nightly_tables = ('clinic', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes','perio_tooth','perio_chart',
                   'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure', 'image_metadata',)
 
 cached_table_defs = {}
@@ -638,16 +638,19 @@ CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {self.prefix}{self.table} ( 
 CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {self.prefix}{self.table} ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
-def correct_ids():
+def correct_ids(staging=True):
+    prefix = 'velox'
+    if staging:
+        prefix = 'staging'
     print("Correcting IDs")
-
-    SQL = '''
-    UPDATE staging.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE staging.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE staging.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE staging.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
-    UPDATE t set t.code = p.code from staging.vx_treatments as t inner join staging.vx_procedure_codes p on p.id = t.procedure_id and p.practice_id = t.practice_id WHERE t.code IS NULL;
-    UPDATE staging.vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
+    SQL = f'''
+    UPDATE {prefix}.vx_ledger SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}.vx_patients SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}.vx_treatments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE {prefix}.vx_appointments SET clinic_id = '64' WHERE clinic_id = '68' or clinic_id = '63';
+    UPDATE t set t.code = p.code from {prefix}.vx_treatments as t inner join {prefix}.vx_procedure_codes p on p.id = t.procedure_id and p.practice_id = t.practice_id WHERE t.code IS NULL;
+    UPDATE {prefix}.vx_providers SET user_type = 'DEN' WHERE user_type NOT IN ('HYG', 'DEN');
     '''
     spawn(db.execute, SQL)
     global current
@@ -715,12 +718,12 @@ def reset(tables=None, practice=False):
     return tables
 
 
-def reset_table(tablename):
+def reset_table(tablename, staging=True):
     import time
     start = time.perf_counter()
     # print('Updating practices')
     # API().practices()
-    x = API()
+    x = API(staging)
     x.bulk_load(tablename, reload=True)
     print(x.missing)
     correct_ids()
@@ -729,7 +732,7 @@ def reset_table(tablename):
     return
 
 
-def resync_table(tablename, pids=None, verbose=False, _async=True):
+def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True):
     print(tablename)
     import time
     from API.scheduling import everyhour
@@ -738,7 +741,7 @@ def resync_table(tablename, pids=None, verbose=False, _async=True):
     # print('Updating practices')
     # API().practices()
     try:
-        x = API()
+        x = API(staging=staging)
         if pids:
             if isinstance(pids, str):
                 pids = pids.split(',')
@@ -785,7 +788,7 @@ def refresh(pids=None):
     return
 
 
-def scheduled(interval=None):
+def scheduled(interval=None, staging=True):
     global current_sync
     error = ''
     from API.scheduling import everyhour
@@ -804,10 +807,10 @@ def scheduled(interval=None):
         for t in sync_tables:
             try:
                 print(t)
-                API().load_sync_files(t, start=ltime, _async=True)
+                API(staging=staging).load_sync_files(t, start=ltime, _async=True)
             except:
                 error = traceback.format_exc()
-        correct_ids()
+        correct_ids(staging=staging)
         print(f'IT TOOK: {time.perf_counter() - start}')
         global current
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
@@ -827,7 +830,7 @@ def nightly():
     _log('nightly', 'SCHEDULED', ','.join(pids), 0, 'started')
     try:
         for table in nightly_tables:
-            resync_table(table, pids=pids)
+            resync_table(table, pids=pids, staging=False)
     except:
         # traceback.print_exc()
         error = traceback.format_exc()
@@ -888,7 +891,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    for each in nightly_tables:
-        print(each)
-        db.execute(f'ALTER SCHEMA velox TRANSFER dbo.vx_{each}')
-        db.execute(f'CREATE VIEW dbo.vx_{each} AS SELECT * FROM velox.vx_{each}')
+    reset_table('perio_tooth')
