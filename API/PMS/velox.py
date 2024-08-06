@@ -115,7 +115,7 @@ class API:
             return False
 
     def get_pids(self):
-        SQL = f'SELECT id FROM {self.prefix}practices'
+        SQL = f'SELECT id FROM dbo.vx_practices'
         pids = db.fetchall(SQL)
         self.pids = [x[0] for x in pids]
         # self.pids = [x[0] for x in pids if x[0] > 1442]
@@ -898,4 +898,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    scheduled('72')
+    scheduled('24')
