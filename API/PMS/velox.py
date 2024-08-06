@@ -14,7 +14,7 @@ import time
 import shutil
 from API.log import api_log as _log, velox_log as log
 
-sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'perio-chart', 'perio-tooth')
+sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'perio_chart', 'perio_tooth')
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
@@ -63,7 +63,7 @@ class API:
     def __init__(self, qa=False, pids=None, staging=True):
         self.root = str(Path.home())+'/dataload/'
         self.backup = str(Path.home())+'/backup/'
-        self.prefix = 'dbo.vx_'
+        self.prefix = 'velox.vx_'
         self.staging_prefix = 'staging.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
@@ -399,6 +399,8 @@ class API:
                                 # if i.get('plan_id'):
                                 #     print(i)
                                 l = list(i.values())
+                                if self.table == 'treatments':
+                                    l = l[:-1] # to sync with surface, need to reload
                                 ia(l[0])
                                 l = [self.cleanup(_) for _ in l]
                                 if int(pid) == 1400:
@@ -421,7 +423,7 @@ class API:
                                     db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                                 else:
                                     db.execute(f'''DELETE FROM {self.staging_prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
-                                    db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
+                                    # db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s AND id in ({','.join(map(str, ids_to_delete))}); ''', upload_pid)
                             else:
                                 self.missing.append(pid)
                     if reload and not data_empty:
@@ -431,7 +433,7 @@ class API:
                             db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                         else:
                             db.execute(f'''DELETE FROM {self.staging_prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
-                            db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
+                            # db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                     self.load_bcp_db(_async=_async)
         except:
             print('******** ERROR ********')
@@ -541,8 +543,8 @@ class API:
             self.filename = f'{self.table}.csv'
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 20000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if self.staging_mode:
-            # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
-            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
+            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
+            # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if _async:
             os.popen(bcp)
         else:
@@ -896,4 +898,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    resync_main('1442')
+    scheduled('72')
