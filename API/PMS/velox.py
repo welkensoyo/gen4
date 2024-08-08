@@ -63,7 +63,7 @@ class API:
     def __init__(self, qa=False, pids=None, staging=True):
         self.root = str(Path.home())+'/dataload/'
         self.backup = str(Path.home())+'/backup/'
-        self.prefix = 'velox.vx_'
+        self.prefix = 'restore.vx_'
         self.staging_prefix = 'staging.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
@@ -133,6 +133,7 @@ class API:
     def last_sync(self, time=None):
         global last_time_sync
         if time:
+            time = arrow.get(time).shift(minutes=-16).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
             with open('last_sync.txt', 'w') as f:
                 f.write(time)
                 last_time_sync = time
@@ -409,7 +410,7 @@ class API:
                                 #     print(i)
                                 l = list(i.values())
                                 if self.table == 'treatments':
-                                    l = l[:-1] # to sync with surface, need to reload
+                                    l = l[:-1]
                                 ia(l[0])
                                 l = [self.cleanup(_) for _ in l]
                                 if int(pid) == 1400:
@@ -545,7 +546,7 @@ class API:
             self.filename = f'{self.table}.csv'
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 20000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}{self.pid}_error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if self.staging_mode:
-            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}{self.pid}_staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
+            bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
             # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if _async:
             os.popen(bcp)
@@ -748,8 +749,6 @@ def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True)
                 x.pids = pids
             elif isinstance(pids, (list,tuple)):
                 x.pids = pids
-        elif not x.staging_mode:
-            return 'No Practice IDs Provided'
         x.load_sync_files(tablename, reload=True, verbose=verbose, _async=_async)
     except:
         traceback.print_exc()
@@ -826,11 +825,10 @@ def scheduled(interval=None, staging=True):
 def nightly():
     start = time.perf_counter()
     error = ''
-    pids = API().pids
-    _log('nightly', 'SCHEDULED', ','.join(pids), 0, 'started')
+    _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
     try:
         for table in nightly_tables:
-            resync_table(table, pids=pids, staging=False)
+            resync_table(table,  staging=False)
     except:
         # traceback.print_exc()
         error = traceback.format_exc()
@@ -891,4 +889,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    reset_table('perio_tooth')
+    scheduled(72)

@@ -1,2 +1,5 @@
-from API.njson import b64e, b64d
-print(b64e('7d32fb90-ed70-44df-98af-6822b05e7ed2'))
+import arrow
+x = arrow.get('2024-08-08T13:23:28.013Z').shift(minutes=-16).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+print(x)
+
+
