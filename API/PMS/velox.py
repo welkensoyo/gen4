@@ -681,6 +681,10 @@ def correct_ids_local(staging=True):
     db.execute(SQL)
     return
 
+def check_staging_migration():
+    SQL = '''SELECT value FROM dev.settings WHERE setting = 'staging_migration' '''
+    return db.fetchone(SQL)[0]
+
 
 def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
@@ -787,6 +791,9 @@ def refresh(pids=None):
 
 
 def scheduled(interval=None, staging=True):
+    if check_staging_migration() == 'True':
+        current = f'Staging migration already in progress...'
+        return
     global current_sync
     if current_sync is True:
         return 'Sync already in progress...'
@@ -894,4 +901,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    resync_table('treatments','1589',  _async=False)
+    print(check_staging_migration())
