@@ -217,7 +217,6 @@ def check(x):
     return str(x)
 
 def create_table(d):
-    print(d)
     def detect(x):
         try:
             int(x)
@@ -231,7 +230,7 @@ def create_table(d):
         except:
             pass
         return 'VARCHAR(max)'
-    keys = list(d[0].keys())
+    keys = list(d.keys())
     total = len(keys)
     inputs = '%s,'*total
     text = ''
@@ -241,18 +240,22 @@ def create_table(d):
 
 
 if __name__ == "__main__":
+    from pprint import pprint
     b = API()
     print(b.competitors())
     for s in (21182,21905,25372,34718):
         x = j.dc(b.survey_response(s, '01/01/2001'))
         if r:= x.get('responseList'):
-            print(len(r))
+            pprint(r[0].keys())
             print(len(r[0]))
             t = create_table(r[0])
             keys = ['responseId', 'requestDate', 'responseDate', 'completed', 'questionCount', 'locale', 'surveyId', 'surveyName', 'surveyType', 'businessId', 'locationName', 'businessNumber', 'businessLocationName', 'customerId', 'customerName', 'customerEmail', 'customerPhone', 'assistedByName,', 'assistedByEmail', 'assistedByPhone', 'ticketed', 'answers', 'overallScore']
             for each in r:
                 response = [check(each.get(k,'')) for k in keys]
-                db.execute(qry['responses'], *response)
+                try:
+                    db.execute(qry['responses'], *response)
+                except:
+                    print('skipping')
 
 
 

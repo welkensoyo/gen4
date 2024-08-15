@@ -125,9 +125,9 @@ class SQLcursor:
                 except ValueError:
                     cursor.execute(PSQL, tuple(args))
                 except:
-                    print(sys._getframe().f_back.f_code)
-                    print(sys._getframe().f_back.f_code.co_name)
-                    traceback.print_exc()
+                    # print(sys._getframe().f_back.f_code)
+                    # print(sys._getframe().f_back.f_code.co_name)
+                    # traceback.print_exc()
                     return ()
                 finally:
                     close()

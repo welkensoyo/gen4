@@ -14,7 +14,7 @@ import time
 import shutil
 from API.log import api_log as _log, velox_log as log
 
-sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers')
+sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'fee_schedule', 'fee_schedule_procedure')
 
 full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers', 'insurance_carriers', 'insurance_claim',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
@@ -364,8 +364,7 @@ class API:
         global current
         self.table = table
         if not self.check_table_sync(self.table):
-            if self.table not in sync_tables:
-                return reset_table(self.table)
+            return reset_table(self.table, staging=self.staging_mode)
         try:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
@@ -789,6 +788,8 @@ def refresh(pids=None):
 
 def scheduled(interval=None, staging=True):
     global current_sync
+    if current_sync is True:
+        return 'Sync already in progress...'
     error = ''
     from API.scheduling import everyhour
     ltime = ''
@@ -823,6 +824,8 @@ def scheduled(interval=None, staging=True):
 
 
 def nightly():
+    global current_sync
+    current_sync = True
     start = time.perf_counter()
     error = ''
     _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
@@ -832,6 +835,8 @@ def nightly():
     except:
         # traceback.print_exc()
         error = traceback.format_exc()
+    finally:
+        current_sync = False
     log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     if error:
@@ -889,4 +894,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    scheduled(72)
+    resync_table('treatments','1589',  _async=False)
