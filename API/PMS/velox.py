@@ -791,10 +791,11 @@ def refresh(pids=None):
 
 
 def scheduled(interval=None, staging=True):
+    global current
+    global current_sync
     if check_staging_migration() == 'True':
         current = f'Staging migration already in progress...'
         return
-    global current_sync
     if current_sync is True:
         return 'Sync already in progress...'
     error = ''
@@ -819,7 +820,6 @@ def scheduled(interval=None, staging=True):
                 error = traceback.format_exc()
         correct_ids(staging=staging)
         print(f'IT TOOK: {time.perf_counter() - start}')
-        global current
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
     except:
         error = traceback.format_exc()
