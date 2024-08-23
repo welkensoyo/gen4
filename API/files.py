@@ -1,10 +1,43 @@
-import API.njson as j
 import csv
 import openpyxl, xlrd
 from lxml import html
-import os
 from io import BytesIO, StringIO
 import bottle
+import xlrd, traceback, uuid, os, hashlib
+from tabula import read_pdf, convert_into
+from PIL import Image
+
+
+def md5(text):
+    x = hashlib.md5()
+    x.update(text)
+    return x.hexdigest()
+
+class PDFProcess(object):
+    def __init__(self, clienthash, file=None, filename=''):
+        self.file = file
+        self.clienthash = clienthash
+        self.filename = filename
+        if self.file:
+            self.filename = file.filename.lower()
+            if os.path.exists(self.filename):
+                os.remove(self.filename)
+            file.save(self.filename)
+            self.result = None
+
+    def read(self, json=False, mtables=False, pages='all'):
+        if not json:
+            try:
+                return read_pdf(self.filename, pages=pages, multiple_tables=mtables, error_bad_lines=False, spreadsheet=mtables, silent=True)
+            except:
+                return read_pdf(self.filename, encoding='latin1', pages=pages, multiple_tables=mtables, error_bad_lines=False, spreadsheet=mtables, silent=True)
+        else:
+            try:
+                return read_pdf(self.filename, pages=pages, output_format="json", multiple_tables=mtables, spreadsheet=mtables, silent=True)
+            except:
+                return read_pdf(self.filename, encoding='latin1', pages=pages, output_format="json", multiple_tables=mtables, spreadsheet=mtables,  silent=True)
+
+
 
 class Excel():
     def __init__(self, ext=None):
@@ -191,24 +224,3 @@ class Excel():
             if h:
                 x[h.lower().strip()] = i
         return x
-
-
-def measures(x, filename):
-    x = j.loads(x)
-    measures = []
-    for i in x['model']['tables']:
-        if i.get('name') == 'Calcs':
-            measures = i['measures']
-    rows = []
-    cols = ["name", "expression", "formatString", "lineageTag", "annotations"]
-    rows.append(cols)
-    rows.extend([[m.get(k) for k in cols] for m in measures ])
-    with open(f'{filename}.csv', 'w',newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerows(rows)
-
-def get_filename(path):
-    return os.path.basename(path)
-
-# print(parse.urlparse('https://sdbrands.sharepoint.com/sites/SDB-RevenueCycleTeam-SDB-RC-PaymentPostingDailyReconciliation/Shared%20Documents/Forms/AllItems.aspx?newTargetListUrl=%2Fsites%2FSDB%2DRevenueCycleTeam%2DSDB%2DRC%2DPaymentPostingDailyReconciliation%2FShared%20Documents&viewpath=%2Fsites%2FSDB%2DRevenueCycleTeam%2DSDB%2DRC%2DPaymentPostingDailyReconciliation%2FShared%20Documents%2FForms%2FAllItems%2Easpx&id=%2Fsites%2FSDB%2DRevenueCycleTeam%2DSDB%2DRC%2DPaymentPostingDailyReconciliation%2FShared%20Documents%2FSDB%20%2D%20RC%20%2D%20Payment%20Posting%20Daily%20Reconciliation%2FPEDS%20ORTHO%20Practices%2D%20Payment%20Posting%20Daily%20Reconciliation%2FAZ%2D%20Payment%20Posting%20Daily%20Recon%2F01&viewid=ca6aed5b%2D8d46%2D46c4%2Dbf22%2D0f234151681b'))
-# print(parse.unquote('%2Fsites%2FSDB%2DRevenueCycleTeam%2DSDB%2DRC%2DPaymentPostingDailyReconciliation%2FShared%20Documents&viewpath=%2Fsites%2FSDB%2DRevenueCycleTeam%2DSDB%2DRC%2DPaymentPostingDailyReconciliation%2FShared%20Documents%2FForms%2FAllItems%2Easpx&id=%2Fsites%2FSDB%2DRevenueCycleTeam%2DSDB%2DRC%2DPaymentPostingDailyReconciliation%2FShared%20Documents%2FSDB%20%2D%20RC%20%2D%20Payment%20Posting%20Daily%20Reconciliation%2FPEDS%20ORTHO%20Practices%2D%20Payment%20Posting%20Daily%20Reconciliation%2FAZ%2D%20Payment%20Posting%20Daily%20Recon%2F01&viewid=ca6aed5b%2D8d46%2D46c4%2Dbf22%2D0f234151681b'))
