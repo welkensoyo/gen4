@@ -48,38 +48,44 @@ def check_compress():
                             print(each)
     print('File optimization completed')
 
+def main():
+    if config.compress:
+        spawn(check_compress)
+    print(Path.home())
+    print('Started...')
+    botapp = bottle.app()
+    for Route in (mainappRoute,):
+        botapp.merge(Route)
+    botapp = SessionMiddleware(botapp, config.beakerconfig)
+    botapp = WhiteNoise(botapp)
+    botapp.add_files(staticfolder, prefix='static/')
+    # botapp.add_files('dist', prefix='dist/')
+    if config.scheduler:
+        scheduler.start()
+    server = WSGIServer(("0.0.0.0", config.port), botapp, handler_class=WebSocketHandler)
+    print('Server Started...')
+
+    def shutdown():
+        print('Shutting down ...')
+        server.stop(timeout=5)
+        exit(signal.SIGTERM)
+
+    sig(signal.SIGTERM, shutdown)
+    sig(signal.SIGINT, shutdown)
+    server.serve_forever()
+
 if __name__ == '__main__':
     import os
     # location = os.devnull
     # location = '/opt/gen4/velox.log'
     # location = '/home/gen4it/velox.log'
     # print(f'Print Redirected to log {location}')
-    with open('velox.log', 'w') as f:
-        with redirect_stdout(f):
-            if config.compress:
-                spawn(check_compress)
-            print(Path.home())
-            print('Started...')
-            botapp = bottle.app()
-            for Route in (mainappRoute,):
-                botapp.merge(Route)
-            botapp = SessionMiddleware(botapp, config.beakerconfig)
-            botapp = WhiteNoise(botapp)
-            botapp.add_files(staticfolder, prefix='static/')
-            # botapp.add_files('dist', prefix='dist/')
-            if config.scheduler:
-                scheduler.start()
-            server = WSGIServer(("0.0.0.0", config.port), botapp, handler_class=WebSocketHandler)
-            print('Server Started...')
-
-            def shutdown():
-                print('Shutting down ...')
-                server.stop(timeout=5)
-                exit(signal.SIGTERM)
-
-            sig(signal.SIGTERM, shutdown)
-            sig(signal.SIGINT, shutdown)
-            server.serve_forever()
+    if config.scheduler == True:
+        with open('velox.log', 'w') as f:
+            with redirect_stdout(f):
+                main()
+    else:
+        main()
 
 
 ''' #Service on Linux to run python

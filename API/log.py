@@ -16,3 +16,7 @@ def velox_log(mode=None, error=''):
         dbpy.execute(SQL, error, mode)
     SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log"
     return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), x[2]) for x in dbpy.fetchall(SQL)]
+
+def velox_stats():
+    SQL = 'SELECT * FROM cached.missed_last_sync ORDER BY 2,3,4'
+    return [(x[0], x[1], x[2], arrow.get(x[3]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), arrow.get(x[4]).to('US/Central').format('YYYY-MM-DD HH:mm:ss')) for x in dbpy.fetchall(SQL)]

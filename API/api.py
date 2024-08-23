@@ -125,6 +125,8 @@ class API:
                 return 'Sync already in progress...'
             spawn(velox.scheduled, self.pl.get('hour'))
             return 'Running...'
+        elif self.option in ('stats',):
+            return velox.stats()
         elif self.option in ('lastupdated','log'):
             return velox.log()
         elif self.option =='pause':

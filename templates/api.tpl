@@ -1,5 +1,6 @@
 %rebase('templates/render/datatablesedit.tpl', title='API Command Center')
 %columns = 'job', 'last run', 'error'
+%columnstats = 'SYNC ISSUES:', 'practice_id', 'clinic_id', 'last_completion', 'last_update'
 <div class="container">
     <h5 class="text-muted">&nbsp;&nbsp;&nbsp;Gen4 API</h5>
     <div class="row">
@@ -33,11 +34,15 @@
     </div>
 <table id="tablex" class="display table-sm table-striped" width="100%"></table>
     <br>
-    <br>
     <div id="message"><strong>Message: </strong> {{ current }}</div>
+    <br>
+    <table id="tablestats" class="display table-sm table-striped" width="100%"></table><br><br></div>
 </div>
+
+
 <script>
 var logurl = '/api/velox/log?apikey={{apikey}}';
+var statsurl = '/api/velox/stats?apikey={{apikey}}';
 
 tablex = $('#tablex').DataTable( {
     dom: "<'row'<'col-md-3'<'toolbar'>><'col-md-3'><'col-md-6'<'toolbar2'>>><'row'<'col-md-6'><'col-md-6'>><'row'<'col-md-12't>><'row'<'col-md-6'i><'col-md-6'p>>",
@@ -56,6 +61,25 @@ tablex = $('#tablex').DataTable( {
         ]
 } );
 
+$.get(statsurl, function( data ) {
+    tablestats = $('#tablestats').DataTable( {
+    data: data,
+    dom: "<'row'<'col-md-3'<'toolbar'>><'col-md-3'><'col-md-6'<'toolbar2'>>><'row'<'col-md-6'><'col-md-6'>><'row'<'col-md-12't>><'row'<'col-md-6'i><'col-md-6'p>>",
+    select: false,
+    responsive: false,
+    paging: false,
+    stateSave: false,
+    colReorder: true,
+    buttons: ['copy', 'excel',  'colvis' ],
+    deferRender: true,
+    "oLanguage": {"sSearch": "Filter:"},
+    columns: [
+%for column in columnstats:
+        { title: "{{column.upper()}}" },
+%end
+        ]
+} );
+})
 
 $.get(logurl, function( data ) {
   tablex.destroy();

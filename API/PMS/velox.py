@@ -12,7 +12,7 @@ import csv
 import requests
 import time
 import shutil
-from API.log import api_log as _log, velox_log as log
+from API.log import api_log as _log, velox_log as log, velox_stats as stats
 
 sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'fee_schedule', 'fee_schedule_procedure')
 
@@ -359,7 +359,7 @@ class API:
                 line[p] = 0
         return line
 
-    def load_sync_files(self, table, start="0001-01-01T00:00:00.000Z", reload=False, verbose=False, _async=True):
+    def load_sync_files(self, table, start="0001-01-01T00:00:00.000Z", reload=False, verbose=False, _async=True, backup=False):
         print('SYNC TMP FILE')
         global current
         self.table = table
@@ -436,6 +436,8 @@ class API:
                         print(f'WIPING {upload_pid} {self.table}')
                         db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
                             # db.execute(f'''DELETE FROM {self.prefix}{self.table} WHERE practice_id = %s; ''', upload_pid)
+                    if backup:
+                        self.backup_file()
                     self.load_bcp_db(_async=_async)
         except:
             print('******** ERROR ********')
@@ -736,7 +738,7 @@ def reset_table(tablename, staging=True):
     return
 
 
-def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True):
+def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True, backup=False):
     print(tablename)
     import time
     from API.scheduling import everyhour
@@ -752,7 +754,7 @@ def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True)
                 x.pids = pids
             elif isinstance(pids, (list,tuple)):
                 x.pids = pids
-        x.load_sync_files(tablename, reload=True, verbose=verbose, _async=_async)
+        x.load_sync_files(tablename, reload=True, verbose=verbose, _async=_async, backup=False)
     except:
         traceback.print_exc()
         error = traceback.format_exc()
@@ -891,8 +893,6 @@ def schedule_pid(interval, table, pid):
     ltime = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
     if interval:
         ltime = arrow.get().shift(hours=-int(interval)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
-    print(ltime)
-    print(table)
     v = API()
     v.pids = [pid]
     v.load_sync_files(table, start=ltime)
@@ -901,4 +901,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    print(check_staging_migration())
+    resync_table('appointments', '2253', _async=False, backup=True)
