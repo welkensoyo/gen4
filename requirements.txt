@@ -39,3 +39,4 @@ office365
 openpyxl
 xlrd
 tabula-py
+pymupdf

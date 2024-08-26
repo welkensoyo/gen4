@@ -687,6 +687,20 @@ def check_staging_migration():
     SQL = '''SELECT value FROM dev.settings WHERE setting = 'staging_migration' '''
     return db.fetchone(SQL)[0]
 
+def sync_in_progress(status=None):
+    if current_sync is True:
+        return True
+    if status not in (None, 'running', 'idle'):
+        return False
+    if status:
+        SQL = ''' UPDATE dev.settings SET value = %s WHERE setting = 'sync_state' '''
+        db.execute(SQL, status)
+        return status
+    SQL = ''' SELECT value FROM dev.settings WHERE setting = 'sync_state' '''
+    status = db.fetchone(SQL, status)[0]
+    if status == 'running':
+        return True
+    return False
 
 def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
@@ -796,10 +810,11 @@ def scheduled(interval=None, staging=True):
     global current
     global current_sync
     if check_staging_migration() == 'True':
-        current = f'Staging migration already in progress...'
+        current = f'Migration still in progress....'
         return
-    if current_sync is True:
-        return 'Sync already in progress...'
+    if sync_in_progress():
+        return 'Sync in progress...'
+    sync_in_progress(status='running')
     error = ''
     from API.scheduling import everyhour
     ltime = ''
@@ -828,16 +843,20 @@ def scheduled(interval=None, staging=True):
     log(mode='sync', error=error)
     everyhour.pause = False
     current_sync = False
+    sync_in_progress(status='idle')
     # _log('scheduled', 'scheduled', str(ltime), 0, error)
     return
 
 
 def nightly():
     global current_sync
+    if current_sync == True:
+        sleep(600)
     current_sync = True
     start = time.perf_counter()
     error = ''
     _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
+    sync_in_progress(status='running')
     try:
         for table in nightly_tables:
             resync_table(table,  staging=False)
@@ -846,6 +865,7 @@ def nightly():
         error = traceback.format_exc()
     finally:
         current_sync = False
+        sync_in_progress(status='idle')
     log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     if error:
@@ -901,4 +921,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    resync_table('appointments', '2253', _async=False, backup=True)
+    resync_table('treatments', '1431', _async=False, backup=True)

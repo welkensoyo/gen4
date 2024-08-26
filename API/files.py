@@ -5,6 +5,7 @@ from io import BytesIO, StringIO
 import bottle
 import xlrd, traceback, uuid, os, hashlib
 from tabula import read_pdf, convert_into
+from tabula.errors import CSVParseError
 from PIL import Image
 
 
@@ -14,9 +15,8 @@ def md5(text):
     return x.hexdigest()
 
 class PDFProcess(object):
-    def __init__(self, clienthash, file=None, filename=''):
+    def __init__(self, file=None, filename=''):
         self.file = file
-        self.clienthash = clienthash
         self.filename = filename
         if self.file:
             self.filename = file.filename.lower()
@@ -25,21 +25,17 @@ class PDFProcess(object):
             file.save(self.filename)
             self.result = None
 
-    def read(self, json=False, mtables=False, pages='all'):
-        if not json:
-            try:
-                return read_pdf(self.filename, pages=pages, multiple_tables=mtables, error_bad_lines=False, spreadsheet=mtables, silent=True)
-            except:
-                return read_pdf(self.filename, encoding='latin1', pages=pages, multiple_tables=mtables, error_bad_lines=False, spreadsheet=mtables, silent=True)
-        else:
-            try:
-                return read_pdf(self.filename, pages=pages, output_format="json", multiple_tables=mtables, spreadsheet=mtables, silent=True)
-            except:
-                return read_pdf(self.filename, encoding='latin1', pages=pages, output_format="json", multiple_tables=mtables, spreadsheet=mtables,  silent=True)
+    def read(self, output_format='json', multiple_tables=True, pages='all'):
+        try:
+            return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=multiple_tables, silent=True)
+        except CSVParseError as e:
+            # Attempt to set `names` to manage different column counts.
+            column_names = [f'column_{i}' for i in range(20)]  # Assume a maximum of 20 columns
+            return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=multiple_tables, silent=True, pandas_options={'names': column_names})
+        return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=True, silent=True)
 
 
-
-class Excel():
+class Excel:
     def __init__(self, ext=None):
         self.file = None
         self.filename = None
