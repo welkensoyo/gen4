@@ -840,10 +840,10 @@ def scheduled(interval=None, staging=True):
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
     except:
         error = traceback.format_exc()
+    sync_in_progress(status='idle')
     log(mode='sync', error=error)
     everyhour.pause = False
     current_sync = False
-    sync_in_progress(status='idle')
     # _log('scheduled', 'scheduled', str(ltime), 0, error)
     return
 
@@ -856,7 +856,6 @@ def nightly():
     start = time.perf_counter()
     error = ''
     _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
-    sync_in_progress(status='running')
     try:
         for table in nightly_tables:
             resync_table(table,  staging=False)
@@ -865,7 +864,6 @@ def nightly():
         error = traceback.format_exc()
     finally:
         current_sync = False
-        sync_in_progress(status='idle')
     log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     if error:
@@ -921,4 +919,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    resync_table('treatments', '1431', _async=False, backup=True)
+    scheduled('24')
