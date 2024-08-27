@@ -840,10 +840,10 @@ def scheduled(interval=None, staging=True):
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
     except:
         error = traceback.format_exc()
-    sync_in_progress(status='idle')
-    log(mode='sync', error=error)
-    everyhour.pause = False
     current_sync = False
+    sync_in_progress(status='idle')
+    everyhour.pause = False
+    log(mode='sync', error=error)
     # _log('scheduled', 'scheduled', str(ltime), 0, error)
     return
 
@@ -914,4 +914,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    scheduled('24')
+    sync_in_progress('idle')
