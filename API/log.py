@@ -20,3 +20,16 @@ def velox_log(mode=None, error=''):
 def velox_stats():
     SQL = 'SELECT * FROM cached.missed_last_sync ORDER BY 2,3,4'
     return [(x[0], x[1], x[2], arrow.get(x[3]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), arrow.get(x[4]).to('US/Central').format('YYYY-MM-DD HH:mm:ss')) for x in dbpy.fetchall(SQL)]
+
+def velox_sync(status=None):
+    if status not in (None, 'running', 'idle'):
+        return False
+    if status:
+        SQL = ''' UPDATE dev.settings SET value = ? WHERE setting = 'sync_state' '''
+        dbpy.execute(SQL, status)
+        return status
+    SQL = ''' SELECT value FROM dev.settings WHERE setting = 'sync_state' '''
+    status = dbpy.fetchall(SQL, status)[0][0]
+    if status == 'running':
+        return True
+    return False

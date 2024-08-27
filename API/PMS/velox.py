@@ -12,7 +12,7 @@ import csv
 import requests
 import time
 import shutil
-from API.log import api_log as _log, velox_log as log, velox_stats as stats
+from API.log import api_log as _log, velox_log as log, velox_stats as stats, velox_sync
 
 sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'fee_schedule', 'fee_schedule_procedure')
 
@@ -688,19 +688,13 @@ def check_staging_migration():
     return db.fetchone(SQL)[0]
 
 def sync_in_progress(status=None):
-    if current_sync is True:
+    if current_sync is True and status is None:
         return True
-    if status not in (None, 'running', 'idle'):
+    try:
+        return velox_sync(status)
+    except:
         return False
-    if status:
-        SQL = ''' UPDATE dev.settings SET value = %s WHERE setting = 'sync_state' '''
-        db.execute(SQL, status)
-        return status
-    SQL = ''' SELECT value FROM dev.settings WHERE setting = 'sync_state' '''
-    status = db.fetchone(SQL, status)[0]
-    if status == 'running':
-        return True
-    return False
+
 
 def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
@@ -817,9 +811,10 @@ def scheduled(interval=None, staging=True):
     sync_in_progress(status='running')
     error = ''
     from API.scheduling import everyhour
+    everyhour.pause = True
     ltime = ''
     try:
-        everyhour.pause = True
+
         import time
         start = time.perf_counter()
         if interval:
@@ -914,4 +909,4 @@ def schedule_pid(interval, table, pid):
 
 if __name__ == '__main__':
     os.chdir('../../')
-    sync_in_progress('idle')
+    scheduled()

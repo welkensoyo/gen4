@@ -40,6 +40,7 @@ def fetchall(SQL, *args):
         return ()
     finally:
         c.close()
+
 def execute(PSQL, *args):
     conn= pyodbc.connect(connection_string, autocommit=True)
     c = conn.cursor()
