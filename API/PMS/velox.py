@@ -849,13 +849,9 @@ def scheduled(interval=None, staging=True):
 
 
 def nightly():
-    global current_sync
-    if current_sync == True:
-        sleep(600)
-    current_sync = True
     start = time.perf_counter()
     error = ''
-    _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
+    # _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
     try:
         for table in nightly_tables:
             resync_table(table,  staging=False)
@@ -863,8 +859,7 @@ def nightly():
         # traceback.print_exc()
         error = traceback.format_exc()
     finally:
-        current_sync = False
-    log(mode='full', error=str(error))
+        log(mode='full', error=str(error))
     print(f'IT TOOK: {time.perf_counter() - start}')
     if error:
         _log('nightly', 'SCHEDULED', str(time.perf_counter() - start), 0, error)
