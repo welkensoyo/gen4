@@ -252,7 +252,7 @@ class API:
             try:
                 for col in cols:
                     if col == 'id':
-                        txt = f'''IF NOT EXISTS (select * from sysobjects where name='vx_{tablename}' and xtype='U') CREATE TABLE {self.prefix}{tablename} 
+                        txt = f'''CREATE TABLE {self.prefix}{tablename} 
                             (id bigint, '''
                     elif '_id' in col:
                         txt += f'{col} varchar(255),'
@@ -299,6 +299,22 @@ class API:
         self.table = f'{path}'
         self.url = f"{self.pre_url}/private/datastream/{path}"
         return self.transmit(self.url)
+
+    def base_stream(self, url, meta=None):
+        self.headers['Accept'] = 'application/x-ndjson'
+        self.headers['Content-Type'] = 'application/json'
+        if meta:
+            meta = j.jc(meta)
+            try:
+                with upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False) as each:
+                    each.auto_close = False
+                    if each.status != 200:
+                        raise Exception(f"{each.status} Gateway Error: The server received an invalid response from the upstream server.")
+                    yield each.data
+            except:
+                # traceback.print_exc()
+                # traceback.
+                yield '{}'
 
     def stream(self, url, meta=None):
         global last_time_sync
@@ -640,6 +656,53 @@ CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {self.prefix}{self.table} ( 
 CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {self.prefix}{self.table} ( [completion_date] ASC, [tx_status] ASC, [deleted] ASC ) INCLUDE([clinic_id],[code],[cost],[id],[patient_id],[practice_id],[provider_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
+    def aging(self, pid, balance_type='patient', date=None):
+        url = f"{self.pre_url}/private/direct/aging_balance"
+        if not pid:
+            return self.transmit(url, mode='GET')
+        if not date:
+            date = arrow.get()
+        date = arrow.get(date).format('YYYY-MM-DD')
+        self.table = 'ar_aging'
+        self.filename = f'{self.table}_{balance_type}_{pid}.csv'
+        meta = {
+            "practice_id": int(pid),
+            "balance_type": balance_type,
+            "reference_date": date
+        }
+        with open(self.root + self.filename, 'w', newline='') as f:
+            cw = csv.writer(f, delimiter='|', lineterminator='\n')
+            for s in self.base_stream(url, meta):
+                x = ndjson.loads(s)
+                for p in x:
+                    for i in p.get('data', []):
+                        l = list(i.values())
+                        try:
+                            if not float(l[1]) and not float(l[2]) and not float(l[3]):
+                                continue
+                        except Exception as exc:
+                            continue
+                        l.insert(0, pid)
+                        l.extend([balance_type, date, arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS')])
+                        cw.writerow(l)
+                        sleep(0)
+        SQL = '''DELETE FROM staging.vx_ar_aging WHERE reference_date = %s and practice_id = %s and balance_type = %s; '''
+        db.execute(SQL, date, pid, balance_type)
+        self.load_bcp_db(_async=True)
+
+def get_aging(reference_date=None):
+    if not reference_date:
+        reference_date = arrow.get().format('YYYY-MM-DD')
+    else:
+        reference_date = arrow.get(reference_date).format('YYYY-MM-DD')
+    v = API()
+    for pid in v.pids:
+        print(pid, reference_date)
+        v.aging(pid, 'patient', reference_date)
+        v.aging(pid, 'insurance', reference_date)
+    return
+
+
 def correct_ids(staging=True):
     prefix = 'velox'
     if staging:
@@ -695,12 +758,10 @@ def sync_in_progress(status=None):
     except:
         return False
 
-
 def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
     SQL = f'SELECT TOP 1 {t[table]} FROM dbo.vx_{table} WHERE {t[table]} <= GETDATE() '
     return db.fetchone(SQL)[0]
-
 
 def reset(tables=None, practice=False):
     error = ''
@@ -731,7 +792,6 @@ def reset(tables=None, practice=False):
     everyhour.pause = False
     return tables
 
-
 def reset_table(tablename, staging=True):
     import time
     start = time.perf_counter()
@@ -744,7 +804,6 @@ def reset_table(tablename, staging=True):
     print(f'IT TOOK: {time.perf_counter() - start}')
     # db.execute(''' DROP TABLE staging.vx_{tablename}; '''.format(tablename=tablename))
     return
-
 
 def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True, backup=False):
     print(tablename)
@@ -773,7 +832,6 @@ def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True,
     current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
 
-
 def refresh(pids=None):
     import time
     from API.scheduling import everyhour
@@ -799,8 +857,7 @@ def refresh(pids=None):
     current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
 
-
-def scheduled(interval=None, staging=True):
+def scheduled(interval=None, staging=True, tables=None):
     global current
     global current_sync
     if check_staging_migration() == 'True':
@@ -824,7 +881,7 @@ def scheduled(interval=None, staging=True):
         else:
             ltime = arrow.get(last_time_sync).shift(minutes=-int(3)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         print(ltime)
-        for t in sync_tables:
+        for t in tables or sync_tables:
             try:
                 print(t)
                 API(staging=staging).load_sync_files(t, start=ltime, _async=True)
@@ -841,7 +898,6 @@ def scheduled(interval=None, staging=True):
     log(mode='sync', error=error)
     # _log('scheduled', 'scheduled', str(ltime), 0, error)
     return
-
 
 def nightly():
     start = time.perf_counter()
@@ -860,7 +916,6 @@ def nightly():
         _log('nightly', 'SCHEDULED', str(time.perf_counter() - start), 0, error)
     return
 
-
 def reload_file(table):
     v = API()
     v.table = table
@@ -871,7 +926,7 @@ def reload_file(table):
 
 def resync_main(pid):
     for t in ('providers','treatments', 'ledger', 'appointments', 'patients'):
-        resync_table(t, pid, verbose=False, _async=True)
+        resync_table(t, str(pid), verbose=False, _async=True)
 
 def fix_clinic_ids():
     for table in ('treatments', 'ledger', 'appointments', 'patients'):
@@ -896,7 +951,6 @@ def check_for_missing_records():
         x.table = table
         x.check_for_missing_records()
 
-
 def schedule_pid(interval, table, pid):
     ltime = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
     if interval:
@@ -906,7 +960,13 @@ def schedule_pid(interval, table, pid):
     v.load_sync_files(table, start=ltime)
     return
 
-
 if __name__ == '__main__':
     os.chdir('../../')
-    scheduled()
+    from pprint import pprint
+    import json
+    import ujson
+    # v = API()
+    # pprint(v.aging(0))
+    resync_main('2989')
+
+
