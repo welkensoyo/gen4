@@ -1,9 +1,10 @@
 from gevent import spawn
 import schedule
 from API.PMS import velox
-
+import arrow
 
 def threeam():
+    velox.get_aging(arrow.now().shift(days=-1).format('YYYY-MM-DD'))
     spawn(velox.nightly)
 
 def fiveam():

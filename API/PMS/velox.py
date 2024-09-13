@@ -63,7 +63,7 @@ class API:
     def __init__(self, qa=False, pids=None, staging=True):
         self.root = str(Path.home())+'/dataload/'
         self.backup = str(Path.home())+'/backup/'
-        self.prefix = 'restore.vx_'
+        self.prefix = 'velox.vx_'
         self.staging_prefix = 'staging.vx_'
         self.db = 'gen4_dw'
         self.filename = ''
@@ -702,7 +702,6 @@ def get_aging(reference_date=None):
         v.aging(pid, 'insurance', reference_date)
     return
 
-
 def correct_ids(staging=True):
     prefix = 'velox'
     if staging:
@@ -721,7 +720,6 @@ def correct_ids(staging=True):
     global current
     current = 'No sync in progress...'
     return
-
 
 def schema():
     v = API()
@@ -821,7 +819,7 @@ def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True,
                 x.pids = pids
             elif isinstance(pids, (list,tuple)):
                 x.pids = pids
-        x.load_sync_files(tablename, reload=True, verbose=verbose, _async=_async, backup=False)
+        x.load_sync_files(tablename, reload=False, verbose=verbose, _async=_async, backup=False)
     except:
         traceback.print_exc()
         error = traceback.format_exc()
@@ -900,9 +898,20 @@ def scheduled(interval=None, staging=True, tables=None):
     return
 
 def nightly():
+    error = ''
+    for t in nightly_tables:
+        try:
+            ltime = arrow.get().shift(hours=-int(48)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
+            API(staging=False).load_sync_files(t, start=ltime, _async=True)
+        except:
+            error = traceback.format_exc()
+    log(mode='full', error=str(error))
+    return
+
+def nightly_full():
     start = time.perf_counter()
     error = ''
-    # _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
+    _log('nightly', 'SCHEDULED', 'ALL', 0, 'started')
     try:
         for table in nightly_tables:
             resync_table(table,  staging=False)
@@ -911,7 +920,6 @@ def nightly():
         error = traceback.format_exc()
     finally:
         log(mode='full', error=str(error))
-    print(f'IT TOOK: {time.perf_counter() - start}')
     if error:
         _log('nightly', 'SCHEDULED', str(time.perf_counter() - start), 0, error)
     return
@@ -966,7 +974,10 @@ if __name__ == '__main__':
     import json
     import ujson
     # v = API()
-    # pprint(v.aging(0))
-    resync_main('2989')
+    get_aging('2024-09-06')
+    get_aging('2024-09-09')
+    get_aging('2024-09-10')
+    get_aging('2024-09-11')
+    get_aging('2024-09-12')
 
 
