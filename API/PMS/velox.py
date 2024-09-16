@@ -408,6 +408,7 @@ class API:
                 for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
                     try:
                         x = ndjson.loads(s)
+                        print(len(x))
                         if verbose:
                             print(x)
                         sleep(0)
@@ -819,7 +820,7 @@ def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True,
                 x.pids = pids
             elif isinstance(pids, (list,tuple)):
                 x.pids = pids
-        x.load_sync_files(tablename, reload=False, verbose=verbose, _async=_async, backup=False)
+        x.load_sync_files(tablename, reload=True, verbose=verbose, _async=_async, backup=backup)
     except:
         traceback.print_exc()
         error = traceback.format_exc()
@@ -973,11 +974,9 @@ if __name__ == '__main__':
     from pprint import pprint
     import json
     import ujson
+    # resync_main('1410')
+    resync_main('1410')
     # v = API()
-    get_aging('2024-09-06')
-    get_aging('2024-09-09')
-    get_aging('2024-09-10')
-    get_aging('2024-09-11')
-    get_aging('2024-09-12')
+
 
 

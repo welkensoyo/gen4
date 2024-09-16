@@ -1,5 +1,5 @@
 import traceback
-from API.config import sharepoint_pages, sharepoint as cert_credentials
+from API.config import sharepoint_pages
 from office365.runtime.auth.authentication_context import AuthenticationContext
 # from office365.runtime.auth.client_credential import ClientCredential
 from office365.sharepoint.client_context import ClientContext
@@ -9,11 +9,19 @@ from API.files import Excel, get_filename
 import API.dbms as db
 import csv, arrow
 from API.cache import sync, retrieve
+import logging
 
+logger = logging.getLogger('sdb_app')
 
 # url_shrpt = 'https://sdbrands.sharepoint.com'
 # auth_url = 'https://login.microsoftonline.com/sdbrands'
 # folder_url_shrpt = '/personal/derek_bartron_sdbmail_com/'
+
+cert_credentials = {
+    # "tenant": '',
+    "client_id": '',
+    "client_secret": ''
+}
 
 
 class API:
@@ -26,8 +34,8 @@ class API:
         self.web = self.ctx.web
         self.ctx.load(self.web)
         self.ctx.execute_query()
-        self.temproot = '\\home\\dataload\\'
-        self.table = 'cached.rcm_weekly'
+        self.temproot = 'c:\data\\'
+        self.table = 'sdb-prod-sqldb01.dbo.rcm_weekly'
         self.current_year = arrow.get().format('YYYY')
         self.filepath = None
         self.cwalk = {}
@@ -35,9 +43,9 @@ class API:
         self.filename = ''
         self.que = []
         self.list_name = ''
-        # print(self.web.properties)
-        # pprint(self.web.properties)
-        # print('Authenticated into sharepoint as: ', self.web.properties['Title'])
+        # logger.info(self.web.properties)
+        # plogger.info(self.web.properties)
+        # logger.info('Authenticated into sharepoint as: ', self.web.properties['Title'])
 
     def overwrite_list(self, name, new_items):
         list_object = self.ctx.web.lists.get_by_title(name)
@@ -193,14 +201,14 @@ class API:
         db.load_bcp_db(self.table, self.filepath, _async=True)
         return result
 
-    def parse_reconciliation(self, folder, refresh=False):
+    def parse_reconciliation(self, folder, refresh=True):
         self.cwalk = crosswalk()
         import os
         errors = []
         if not refresh:
             contents = retrieve('RCON')
         else:
-            print('Pulling Documents from Sharepoint Location...')
+            logger.info('Pulling Documents from Sharepoint Location...')
             contents = self.folder_contents(folder, recursive=True)
             sync('RCON', contents)
         count = 0
@@ -208,7 +216,7 @@ class API:
         for doc in contents:
             if doc['ServerRelativeUrl'].endswith('.xlsx') and self.current_year in doc['ServerRelativeUrl'] and doc['Exists'] and 'Zzz' not in doc['ServerRelativeUrl']:
                 try:
-                    print('Recon processing: ', doc['UniqueId'])
+                    logger.info(f'Recon processing: {doc["UniqueId"]}')
                     self.rcm(doc['UniqueId'], get_filename(doc['ServerRelativeUrl']))
                     count+=1
                 except Exception as e:
@@ -217,14 +225,14 @@ class API:
                     errors.append([doc['UniqueId'], doc['ServerRelativeUrl'], x])
                     os.remove(self.filepath)
         sync('RCON_errors',errors)
-        print(count)
+        logger.info(count)
         return self
 
     def errors(self):
         return retrieve('RCON_errors') or [['','','']]
 
     def error_report(self):
-        print(self.errors())
+        logger.info(self.errors())
         return [[x[0], get_filename(x[1]), x[2]] for x in self.errors()]
 
     def bulk_import(self):
@@ -274,30 +282,31 @@ def crosswalk():
 if __name__ == '__main__':
     from time import time, perf_counter
     from pprint import pprint
-    x = API(sharepoint_pages.rcm).folders('Shared Documents', recursive=True)
-    pprint(x)
+    s = API(sharepoint_pages.terminated)
+    pprint(s.get_list('Terminated Users'))
+    # API(sharepoint_pages.recon).parse_reconciliation('Shared Documents', refresh=True)
     # a = API(sharepoint_pages.terminated)
-    # print(a.get_list('Terminated Users'))
+    # logger.info(a.get_list('Terminated Users'))
 
-    # print(crosswalk())
+    # logger.info(crosswalk())
     # s = API(data_team_url)
     # x = s.get_list('SDB Corporate Directory')
-    # print(s.cols)
-    # pprint(x)
+    # logger.info(s.cols)
+    # plogger.info(x)
     # for each in x:
-    #     print(each.properties['Title'])
+    #     logger.info(each.properties['Title'])
 
     # x = s.error_report()
-    # pprint(x)
-    # print(len(x))
+    # plogger.info(x)
+    # logger.info(len(x))
     # start = perf_counter()
     # x.parse_reconciliation('Shared Documents', refresh=False)
     # end = perf_counter()
-    # print(end - start)
+    # logger.info(end - start)
     # x.import_excel('3a3215af-21df-437f-90aa-4ede1a50c43b')
     # x = API(data_team_url)
-    # print(x.download('50BF3F24-583A-4DC7-97F5-55F096E3E9D2'))
+    # logger.info(x.download('50BF3F24-583A-4DC7-97F5-55F096E3E9D2'))
     # f = x.folder_contents('Shared Documents', recursive=True)
     # for d in f:
-    #     print(d['Name'])
-    # pprint(f)
+    #     logger.info(d['Name'])
+    # plogger.info(f)

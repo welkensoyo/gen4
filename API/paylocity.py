@@ -7,10 +7,11 @@ import arrow
 
 import unittest
 
-company_list = 181663,179638,173664,173663,173662,173909,173908,163041,163042,163040,149697,144351,144350,94291,94290,124606,124605,124604,124602,124601
-client_id = '3hlQ2wLHFk6UjupMGIoE8S04NTg1Mzk3OTUxOTk4Mjk3NTc1'
-client_secret = 'nvTf/fwa/B2RUIRCe4hUf5FjFs/DCHiI+MXvqhx//gVSEIU3+T6ceGbOll+B0jJLo5NsUUpm3Jhyls0c1IbXuA=='
-company_id = '181663'
+company_list = []
+compids = ()
+client_id = ''
+client_secret = ''
+company_id = ''
 
 url = 'https://api.paylocity.com/api/v2/companies/181663/employees'
 production = 'https://api.paylocity.com/IdentityServer/connect/token'
@@ -36,8 +37,6 @@ secret = json.b64e(client_id+':'+client_secret)
 #     'Authorization': 'Bearer '+access_token
 # }
 
-
-compids = (181663,179638,173664,173663,173662,173909,173908,163041,163042,163040,149697,144351,144350,94291,94290,124606,124605,124604,124602,124601)
 class ConnectionError(Exception):
     pass
 
