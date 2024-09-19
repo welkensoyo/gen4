@@ -1,7 +1,7 @@
 from API import dbms as db
 
 qry = {
-    'new' : ''' INSERT INTO dev.TRACKER (method, userid, action, last_updated) VALUES (%s, %s, %s, GETDATE() ) '''
+    'new' : ''' INSERT INTO dev.TRACKER (method, userid, action) VALUES (%s, %s, %s) '''
 }
 
 def report_clicked(method, userid, action):
