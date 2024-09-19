@@ -161,3 +161,13 @@ class API:
         }
         return methods[self.option](self.pl)
 
+    def tracking(self):
+        if self.option == 'clicked':
+            from API.tracking import report_clicked
+            method = self.pl.get('method')
+            userid = self.pl.get('userid')
+            action = self.pl.get('action')
+            if method and userid and action:
+                report_clicked(method, userid, action)
+
+

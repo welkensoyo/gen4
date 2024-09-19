@@ -122,13 +122,16 @@ class API:
         except:
             return False
 
-    def get_pids(self):
-        SQL = f'SELECT id FROM dbo.vx_practices'
-        pids = db.fetchall(SQL)
+    def get_pids(self, qry='SELECT id FROM dbo.vx_practices'):
+        pids = db.fetchall(qry)
         self.pids = [x[0] for x in pids]
         # self.pids = [x[0] for x in pids if x[0] > 1442]
         self.pids.sort()
         return self
+
+    def get_specific_pids(self):
+        SQL = '''SELECT practice_id FROM dbo.DimPractice WHERE DPMS IN ('Eaglesoft', 'Open Dental') '''
+        return self.get_pids(qry=SQL)
 
     def last_sync(self, time=None):
         global last_time_sync
@@ -813,7 +816,8 @@ def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True,
     # print('Updating practices')
     # API().practices()
     try:
-        x = API(staging=staging)
+        # x = API(staging=staging)
+        x = API(staging=staging).get_specific_pids()
         if pids:
             if isinstance(pids, str):
                 pids = pids.split(',')
@@ -969,13 +973,22 @@ def schedule_pid(interval, table, pid):
     v.load_sync_files(table, start=ltime)
     return
 
+def get_month_days(month, year):
+    start_date = arrow.get(f'{year}-{month}-01')
+    end_date = start_date.shift(months=1).shift(days=-1)
+    return [start_date.shift(days=i).format('YYYY-MM-DD') for i in range((end_date - start_date).days + 1)]
+
 if __name__ == '__main__':
     os.chdir('../../')
     from pprint import pprint
     import json
     import ujson
+    get_aging('2024-09-16')
+    get_aging('2024-09-15')
+
     # resync_main('1410')
-    resync_main('1410')
+    # for pid in API().get_specific_pids().pids:
+    #     resync_main(pid)
     # v = API()
 
 
