@@ -7,3 +7,6 @@ qry = {
 def report_clicked(method, userid, action):
     return db.execute(qry['new'], method, userid, action)
 
+
+if __name__=='__main__':
+    print(report_clicked('test','test@test.com','clicked'))

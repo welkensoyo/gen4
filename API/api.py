@@ -50,7 +50,9 @@ class API:
         except:
             self.request_details = {'mode':'Internal'}
         self.pl['ip'] = self.request_details.get('REMOTE_ADDR') or '127.0.0.1'
-        if not self.apikey == '8725c240-f1bc-41df-87c5-b9738b3cc75a':
+        if self.apikey not in ('8725c240-f1bc-41df-87c5-b9738b3cc75a','tracker'):
+            abort(500, 'Oops please check API specs and try again...')
+        if self.apikey == 'tracker' and self.option != 'clicked':
             abort(500, 'Oops please check API specs and try again...')
 
     # def login(self):
@@ -169,5 +171,6 @@ class API:
             action = self.pl.get('action')
             if method and userid and action:
                 report_clicked(method, userid, action)
+            return 'REPORT ACKNOWLEDGEMENT SUCCESSFUL'
 
 

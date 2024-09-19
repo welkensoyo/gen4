@@ -28,6 +28,10 @@ def serve_icon():
 def hcheck():
     return 'Running....'
 
+@get('/submission')
+def _thanks():
+    return template('templates/submitted.tpl')
+
 @get('/')
 @get('/api')
 def _index():
@@ -44,8 +48,6 @@ def _api(command=None, option='', option2=''):
     result = None
     code = 500
     error = None
-    response.headers['Content-Type'] = 'application/json'
-    response.headers['Cache-Control'] = 'no-cache'
     query = json.merge_dicts(dict(request.forms), dict(request.query.decode()))
     apikey = query.pop('apikey', None) or request.headers.get('Authorization', '').replace('bearer', '').replace('Bearer', '').replace('BEARER', '').strip() or query.pop('sessionkey', None)
     payload = json.dc(request.json) or query
@@ -59,6 +61,10 @@ def _api(command=None, option='', option2=''):
     try:
         if callable(func):
             result = func()
+            if command == 'tracking':
+                return template('templates/submitted.tpl')
+            response.headers['Content-Type'] = 'application/json'
+            response.headers['Cache-Control'] = 'no-cache'
             if result:
                 result = json.jc(result)
                 code = 200
@@ -70,6 +76,7 @@ def _api(command=None, option='', option2=''):
         sleep(1)
         result = json.jc({'status': False, 'message': 'Missing ' + str(exc)})
     except Exception as exc:
+        traceback.print_exc()
         error = traceback.format_exc()
         sleep(5)
         result = json.jc({'status': False, 'message': 'Oops, please check API specifications...'})
