@@ -83,7 +83,6 @@ class API:
         self.missing = []
         if not self.pids or pids == 'ALL':
             self.get_pids()
-        self.check_table_sync(None)
         self.staging_mode = staging
         if self.staging_mode:
             self.prefix = self.staging_prefix
@@ -95,8 +94,11 @@ class API:
 
     def check_table_sync(self, tablename):
         if not tablename and not cached_table_defs:
-            for each in sync_tables:
-                cached_table_defs[each] = self.tables(tablename) or j.dc(self.datastream(each))
+            for each in full_tables:
+                if x:= self.tables(each):
+                    cached_table_defs[each] = j.jc(x)
+                else:
+                    self.tables(each, meta=j.jc(self.datastream(each)))
             return True
         elif not cached_table_defs.get(tablename):
             cached_table_defs[tablename] = self.tables(tablename) or j.dc(self.datastream(tablename))
@@ -113,7 +115,7 @@ class API:
         if meta:
             SQL = '''DELETE FROM dev.api_tables WHERE tablename = %s'''
             db.execute(SQL, tablename)
-            SQL = '''INSERT INTO dev.api_tables (tablename, meta) VALUES (%s, %s, getdate())'''
+            SQL = '''INSERT INTO dev.api_tables (tablename, meta) VALUES (%s, %s)'''
             db.execute(SQL, tablename, j.jc(meta))
             return meta
         SQL = f'SELECT meta FROM dev.api_tables WHERE tablename = %s'
@@ -288,7 +290,6 @@ class API:
                         else:
                             row.append(None)
                     row.append(arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS'))
-                    print(row)
                     rows.append(tuple(row))
                 rows = tuple(rows)
                 db.executemany(PSQL, rows)
@@ -411,7 +412,6 @@ class API:
                 for s in self.stream('https://ds-prod.tx24sevendev.com/v1/private/datastream', meta=meta):
                     try:
                         x = ndjson.loads(s)
-                        print(len(x))
                         if verbose:
                             print(x)
                         sleep(0)
@@ -464,7 +464,6 @@ class API:
             traceback.print_exc()
             sleep(10)
             self.load_sync_files(table, start, reload=reload, verbose=verbose, _async=_async)
-
 
     def bulk_reload(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
@@ -568,6 +567,7 @@ class API:
         bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 20000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}{self.pid}_error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if self.staging_mode:
             bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; rm "{self.root}{self.filename}" '
+            # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|" '
             # bcp = f'/opt/mssql-tools/bin/bcp {self.db}.{self.staging_prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}staging_error.txt" -h TABLOCK -a 16384 -q -c -t "|"; /opt/mssql-tools/bin/bcp {self.db}.{self.prefix}{self.table} in "{self.root}{self.filename}" -b 10000 -S {ss.server} -U {ss.user} -P {ss.password} -e "{self.root}error.txt" -h TABLOCK -a 16384 -q -c -t "|" ; rm "{self.root}{self.filename}" '
         if _async:
             os.popen(bcp)
@@ -674,12 +674,16 @@ CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {self.prefi
             "balance_type": balance_type,
             "reference_date": date
         }
+        columns = []
         with open(self.root + self.filename, 'w', newline='') as f:
             cw = csv.writer(f, delimiter='|', lineterminator='\n')
             for s in self.base_stream(url, meta):
                 x = ndjson.loads(s)
                 for p in x:
                     for i in p.get('data', []):
+                        if 'columns' in i:
+                            columns = i['columns']
+                            continue
                         l = list(i.values())
                         try:
                             if not float(l[1]) and not float(l[2]) and not float(l[3]):
@@ -687,7 +691,13 @@ CREATE NONCLUSTERED INDEX [ix_{table}__deleted_status_completion] ON {self.prefi
                         except Exception as exc:
                             continue
                         l.insert(0, pid)
-                        l.extend([balance_type, date, arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS')])
+                        if len(columns) == 7:
+                            l.insert(7,'0.00')
+                            l.extend(['0.00', balance_type, date, arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS')])
+                        elif len(l) > 6:
+                            l.extend([balance_type, date, arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS')])
+                        else:
+                            l.extend(['0.00','0.00','0.00','0.00',balance_type, date, arrow.get().format('YYYY-MM-DD HH:mm:ss.SSSSSS')])
                         cw.writerow(l)
                         sleep(0)
         SQL = '''DELETE FROM staging.vx_ar_aging WHERE reference_date = %s and practice_id = %s and balance_type = %s; '''
@@ -799,7 +809,7 @@ def reset_table(tablename, staging=True):
     start = time.perf_counter()
     # print('Updating practices')
     # API().practices()
-    x = API(staging)
+    x = API(staging=staging)
     x.bulk_load(tablename, reload=True)
     print(x.missing)
     correct_ids()
@@ -817,7 +827,7 @@ def resync_table(tablename, pids=None, verbose=False, _async=True, staging=True,
     # API().practices()
     try:
         # x = API(staging=staging)
-        x = API(staging=staging).get_specific_pids()
+        x = API(staging=staging)
         if pids:
             if isinstance(pids, str):
                 pids = pids.split(',')
@@ -873,6 +883,8 @@ def scheduled(interval=None, staging=True, tables=None):
     from API.scheduling import everyhour
     everyhour.pause = True
     ltime = ''
+    if not cached_table_defs:
+        API(staging=staging).check_table_sync(None)
     try:
 
         import time
@@ -983,13 +995,8 @@ if __name__ == '__main__':
     from pprint import pprint
     import json
     import ujson
-    get_aging('2024-09-16')
-    get_aging('2024-09-15')
-
-    # resync_main('1410')
+    # get_aging('2024-09-19')
     # for pid in API().get_specific_pids().pids:
     #     resync_main(pid)
-    # v = API()
-
-
+    # get_aging('2024-09-22')
 

@@ -172,5 +172,3 @@ class API:
             if method and userid and action:
                 report_clicked(method, userid, action)
             return 'REPORT ACKNOWLEDGEMENT SUCCESSFUL'
-
-

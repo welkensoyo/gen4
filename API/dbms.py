@@ -127,7 +127,7 @@ class SQLcursor:
                 except:
                     # print(sys._getframe().f_back.f_code)
                     # print(sys._getframe().f_back.f_code.co_name)
-                    # traceback.print_exc()
+                    traceback.print_exc()
                     return ()
                 finally:
                     close()
