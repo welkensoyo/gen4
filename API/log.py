@@ -29,7 +29,7 @@ def velox_sync(status=None):
         dbpy.execute(SQL, status)
         return status
     SQL = ''' SELECT value FROM dev.settings WHERE setting = 'sync_state' '''
-    status = dbpy.fetchall(SQL, status)[0][0]
+    status = dbpy.fetchall(SQL)[0][0]
     if status == 'running':
         return True
     return False

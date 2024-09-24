@@ -5,7 +5,11 @@ qry = {
 }
 
 def report_clicked(method, userid, action):
-    return db.execute(qry['new'], method, userid, action)
+    try:
+        db.execute(qry['new'], method, userid, action)
+        return
+    except:
+        return
 
 
 if __name__=='__main__':

@@ -6,6 +6,7 @@ import arrow
 import API.cache as cache
 from API.clinic import API as Practice
 from API.PMS.birdeye import API as Birdeye
+from API.tracking import report_clicked
 import API.PMS.velox as velox
 
 def keygen():
@@ -165,7 +166,6 @@ class API:
 
     def tracking(self):
         if self.option == 'clicked':
-            from API.tracking import report_clicked
             method = self.pl.get('method')
             userid = self.pl.get('userid')
             action = self.pl.get('action')

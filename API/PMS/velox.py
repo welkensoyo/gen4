@@ -93,15 +93,15 @@ class API:
         }
 
     def check_table_sync(self, tablename):
-        if not tablename and not cached_table_defs:
+        if not tablename and not cached_table_defs: #initialize empty cache
             for each in full_tables:
                 if x:= self.tables(each):
-                    cached_table_defs[each] = j.jc(x)
+                    cached_table_defs[each] = j.dc(x)
                 else:
-                    self.tables(each, meta=j.jc(self.datastream(each)))
+                    self.tables(each, meta=j.dc(self.datastream(each)))
             return True
-        elif not cached_table_defs.get(tablename):
-            cached_table_defs[tablename] = self.tables(tablename) or j.dc(self.datastream(tablename))
+        elif not cached_table_defs.get(tablename): #never seen before
+            cached_table_defs[tablename] = j.dc(self.tables(tablename)) or j.dc(self.datastream(tablename))
             return True
         if tablename:
             table_def = j.dc(self.datastream(tablename))
@@ -428,8 +428,8 @@ class API:
                                 # if i.get('plan_id'):
                                 #     print(i)
                                 l = list(i.values())
-                                if self.table == 'treatments':
-                                    l = l[:-1]
+                                # if self.table == 'treatments':
+                                #     l = l[:-1]
                                 ia(l[0])
                                 l = [self.cleanup(_) for _ in l]
                                 if int(pid) == 1400:
@@ -886,7 +886,6 @@ def scheduled(interval=None, staging=True, tables=None):
     if not cached_table_defs:
         API(staging=staging).check_table_sync(None)
     try:
-
         import time
         start = time.perf_counter()
         if interval:
@@ -895,15 +894,14 @@ def scheduled(interval=None, staging=True, tables=None):
             ltime = arrow.get().shift(hours=-int(24)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
         else:
             ltime = arrow.get(last_time_sync).shift(minutes=-int(3)).format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]')
-        print(ltime)
         for t in tables or sync_tables:
+            print(t)
             try:
-                print(t)
                 API(staging=staging).load_sync_files(t, start=ltime, _async=True)
             except:
                 error = traceback.format_exc()
         correct_ids(staging=staging)
-        print(f'IT TOOK: {time.perf_counter() - start}')
+        # print(f'IT TOOK: {time.perf_counter() - start}')
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
     except:
         error = traceback.format_exc()
@@ -998,5 +996,10 @@ if __name__ == '__main__':
     # get_aging('2024-09-19')
     # for pid in API().get_specific_pids().pids:
     #     resync_main(pid)
-    # get_aging('2024-09-22')
+    # reset_table('treatments', staging=True)
+    # pprint(cached_table_defs)
+    scheduled('12')
+    # v = API()print(v.check_table_sync('treatments'))
+
+
 
