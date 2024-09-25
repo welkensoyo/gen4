@@ -870,7 +870,7 @@ def refresh(pids=None):
     current = f'No Sync In Progress... last sync took {time.perf_counter() - start} seconds...'
     return
 
-def scheduled(interval=None, staging=True, tables=None):
+def scheduled(interval=None, staging=True, tables=None, _async=True):
     global current
     global current_sync
     if check_staging_migration() == 'True':
@@ -897,7 +897,7 @@ def scheduled(interval=None, staging=True, tables=None):
         for t in tables or sync_tables:
             print(t)
             try:
-                API(staging=staging).load_sync_files(t, start=ltime, _async=True)
+                API(staging=staging).load_sync_files(t, start=ltime, _async=_async)
             except:
                 error = traceback.format_exc()
         correct_ids(staging=staging)
@@ -997,8 +997,11 @@ if __name__ == '__main__':
     # for pid in API().get_specific_pids().pids:
     #     resync_main(pid)
     # reset_table('treatments', staging=True)
+    # v = API(staging=True)
+    # v.check_table_sync(None)
+    # pprint(v.check_table_sync('procedure_codes'))
     # pprint(cached_table_defs)
-    scheduled('12')
+    scheduled('72', _async=False)
     # v = API()print(v.check_table_sync('treatments'))
 
 
