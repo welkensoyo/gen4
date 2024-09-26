@@ -9,6 +9,14 @@ def api_log(route, method, payload, code, result):
         dbpy.execute(PSQL, route, method, payload, code, result)
     spawn(_, route, method, payload, code, result)
 
+def sync_log(table, pids, result):
+    if isinstance(pids, (list,tuple,set)):
+        pids = ','.join(map(str, pids))
+    # print('api_log', route, method, payload, code, result)
+    def _(table, pids, result):
+        PSQL = ''' INSERT INTO dev.sync_log (table, pids, result) VALUES (?, ?, ?) '''
+        dbpy.execute(PSQL, table, pids, result)
+    spawn(_, table, pids, result)
 
 def velox_log(mode=None, error=''):
     if mode:

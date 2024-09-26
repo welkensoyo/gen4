@@ -12,7 +12,7 @@ import csv
 import requests
 import time
 import shutil
-from API.log import api_log as _log, velox_log as log, velox_stats as stats, velox_sync
+from API.log import api_log as _log, velox_log as log, velox_stats as stats, velox_sync, sync_log
 
 sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'fee_schedule', 'fee_schedule_procedure')
 
@@ -389,6 +389,7 @@ class API:
             print(f'Creating Folder {self.root + self.filename}')
             self.create_folder()
             reload_save = reload
+            sync_log(table, self.pids, 'started')
             for pid in self.pids:
                 self.pid = pid
                 proc_codes = None
@@ -459,11 +460,15 @@ class API:
                     if backup:
                         self.backup_file()
                     self.load_bcp_db(_async=_async)
+
         except:
             print('******** ERROR ********')
-            traceback.print_exc()
+            sync_log(table, self.pids, f'ERROR: {traceback.format_exc()}')
+            # traceback.print_exc()
             sleep(10)
             self.load_sync_files(table, start, reload=reload, verbose=verbose, _async=_async)
+        sync_log(table, self.pids, 'completed')
+        return self
 
     def bulk_reload(self, table, start="2001-01-01T00:00:00.000Z", reload=False):
         print('LOAD TMP FILE')
@@ -1001,7 +1006,8 @@ if __name__ == '__main__':
     # v.check_table_sync(None)
     # pprint(v.check_table_sync('procedure_codes'))
     # pprint(cached_table_defs)
-    scheduled('72', _async=False)
+    # scheduled('72', _async=False)
+    sync_log('TEST',[23,22,21],'started')
     # v = API()print(v.check_table_sync('treatments'))
 
 
