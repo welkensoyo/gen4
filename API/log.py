@@ -14,7 +14,7 @@ def sync_log(table, pids, result):
         pids = ','.join(map(str, pids))
     # print('api_log', route, method, payload, code, result)
     def _(table, pids, result):
-        PSQL = ''' INSERT INTO dev.sync_log (table, pids, result) VALUES (?, ?, ?) '''
+        PSQL = ''' INSERT INTO dev.sync_log (tablename, pids, result) VALUES (?, ?, ?) '''
         dbpy.execute(PSQL, table, pids, result)
     spawn(_, table, pids, result)
 
