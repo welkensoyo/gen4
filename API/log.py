@@ -1,5 +1,6 @@
 from gevent import spawn
 import API.dbpyodbc as dbpy
+import API.dbms as dbms
 import arrow
 
 def api_log(route, method, payload, code, result):
@@ -33,11 +34,11 @@ def velox_sync(status=None):
     if status not in (None, 'running', 'idle'):
         return False
     if status:
-        SQL = ''' UPDATE dev.settings SET value = ? WHERE setting = 'sync_state' '''
-        dbpy.execute(SQL, status)
+        SQL = ''' UPDATE dev.settings SET value = %s WHERE setting = 'sync_state' '''
+        dbms.execute(SQL, status)
         return status
     SQL = ''' SELECT value FROM dev.settings WHERE setting = 'sync_state' '''
-    status = dbpy.fetchall(SQL)[0][0]
+    status = dbms.fetchall(SQL)[0][0]
     if status == 'running':
         return True
     return False
