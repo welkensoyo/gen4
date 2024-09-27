@@ -1007,8 +1007,9 @@ if __name__ == '__main__':
     # pprint(v.check_table_sync('procedure_codes'))
     # pprint(cached_table_defs)
     # scheduled('72', _async=False)
-    sync_log('TEST',[23,22,21],'started')
+    # scheduled('12',_async=True)
     # v = API()print(v.check_table_sync('treatments'))
+    get_aging('2024-08-31')
 
 
 

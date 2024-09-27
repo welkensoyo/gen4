@@ -5,6 +5,7 @@ from gevent import signal_handler as sig
 import bottle
 import API.scheduler as scheduler
 import API.config as config
+import argparse
 # import logging, sys
 # from logging import handlers
 from gevent.pywsgi import WSGIServer
@@ -75,12 +76,17 @@ def main():
     server.serve_forever()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Gen4 API')
+    parser.add_argument('--log', type=str, default='system', help='Redirect print')
+    args = parser.parse_args()
     import os
     # location = os.devnull
     # location = '/opt/gen4/velox.log'
     # location = '/home/gen4it/velox.log'
     # print(f'Print Redirected to log {location}')
-    if config.scheduler == True:
+    if args.log == 'console':
+        main()
+    elif config.scheduler == True:
         with open('velox.log', 'w') as f:
             with redirect_stdout(f):
                 main()
