@@ -5,6 +5,7 @@ import arrow
 from cachetools import TTLCache
 from cachetools import cached
 cache = TTLCache(maxsize=10, ttl=300)
+synccache = TTLCache(maxsize=2, ttl=300)
 
 def api_log(route, method, payload, code, result):
     # print('api_log', route, method, payload, code, result)
@@ -33,7 +34,7 @@ def velox_log(mode=None, error=''):
     except:
         return []
 
-@cached(cache)
+@cached(synccache)
 def velox_stats():
     SQL = 'SELECT * FROM cached.missed_last_sync ORDER BY 2,3,4'
     return [(x[0], x[1], x[2], arrow.get(x[3]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), arrow.get(x[4]).to('US/Central').format('YYYY-MM-DD HH:mm:ss')) for x in dbpy.fetchall(SQL)]
