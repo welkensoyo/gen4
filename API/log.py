@@ -20,11 +20,14 @@ def sync_log(table, pids, result):
     spawn(_, table, pids, result)
 
 def velox_log(mode=None, error=''):
-    if mode:
-        SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE() AT TIME ZONE 'Central Standard Time', error=? WHERE [mode] = ?"
-        dbpy.execute(SQL, error, mode)
-    SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log"
-    return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), x[2]) for x in dbpy.fetchall(SQL)]
+    try:
+        if mode:
+            SQL = "UPDATE dbo.vx_log SET last_sync=GETDATE() AT TIME ZONE 'Central Standard Time', error=? WHERE [mode] = ?"
+            dbpy.execute(SQL, error, mode)
+        SQL = "SELECT mode, CONVERT(VARCHAR, last_sync, 120), error FROM dbo.vx_log"
+        return [(x[0], arrow.get(x[1]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), x[2]) for x in dbpy.fetchall(SQL)]
+    except:
+        return []
 
 def velox_stats():
     SQL = 'SELECT * FROM cached.missed_last_sync ORDER BY 2,3,4'
