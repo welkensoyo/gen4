@@ -21,13 +21,12 @@ else:
         f'PWD={sqlserver.password};'
         'TrustServerCertificate=yes;'
     )
-_conn = None
-
+conn = pyodbc.connect(connection_string, autocommit=True)
 
 def fetchall(SQL, *args):
     try:
         print(SQL)
-        conn = pyodbc.connect(connection_string, autocommit=True)
+        # conn = pyodbc.connect(connection_string, autocommit=True)
         print(connection_string)
         c = conn.cursor()
         try:
@@ -51,7 +50,7 @@ def fetchall(SQL, *args):
 
 def execute(PSQL, *args):
     try:
-        conn= pyodbc.connect(connection_string, autocommit=True)
+        # conn= pyodbc.connect(connection_string, autocommit=True)
         c = conn.cursor()
         try:
             c.execute(PSQL, args)
