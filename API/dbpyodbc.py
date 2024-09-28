@@ -25,39 +25,52 @@ _conn = None
 
 
 def fetchall(SQL, *args):
-    conn= pyodbc.connect(connection_string, autocommit=True)
-    print(connection_string)
-    c = conn.cursor()
     try:
-        c.execute(SQL, args)
-        return c.fetchall()
-    except TypeError:
-        c.execute(SQL, args[0])
-        return c.fetchall()
+        print(SQL)
+        conn = pyodbc.connect(connection_string, autocommit=True)
+        print(connection_string)
+        c = conn.cursor()
+        try:
+            c.execute(SQL, args)
+            return c.fetchall()
+        except TypeError:
+            c.execute(SQL, args[0])
+            return c.fetchall()
+        except Exception as exc:
+            print(sys._getframe().f_back.f_code)
+            print(sys._getframe().f_back.f_code.co_name)
+            print(str(exc))
+            return ()
+        finally:
+            c.close()
     except Exception as exc:
         print(sys._getframe().f_back.f_code)
         print(sys._getframe().f_back.f_code.co_name)
-        print(str(exc))
+        traceback.print_exc()
         return ()
-    finally:
-        c.close()
 
 def execute(PSQL, *args):
-    conn= pyodbc.connect(connection_string, autocommit=True)
-    c = conn.cursor()
     try:
-        c.execute(PSQL, args)
-    except TypeError:
-        c.execute(PSQL, args[0])
-    except ValueError:
-        c.execute(PSQL, tuple(args))
+        conn= pyodbc.connect(connection_string, autocommit=True)
+        c = conn.cursor()
+        try:
+            c.execute(PSQL, args)
+        except TypeError:
+            c.execute(PSQL, args[0])
+        except ValueError:
+            c.execute(PSQL, tuple(args))
+        except:
+            print(sys._getframe().f_back.f_code)
+            print(sys._getframe().f_back.f_code.co_name)
+            traceback.print_exc()
+            return ()
+        finally:
+            c.close()
     except:
         print(sys._getframe().f_back.f_code)
         print(sys._getframe().f_back.f_code.co_name)
         traceback.print_exc()
         return ()
-    finally:
-        c.close()
 
 
 
