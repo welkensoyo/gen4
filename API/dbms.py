@@ -180,6 +180,11 @@ class AsyncConnectionPool:
             with conn.cursor() as cursor:
                 return self.pool.apply(cursor.execute, (sql,) + args)
 
+    def executemany(self, sql, *args):
+        with self.get_conn() as conn:
+            with conn.cursor() as cursor:
+                return self.pool.apply(cursor.executemany, (sql,) + args)
+
     def fetchall(self, sql, *args):
         with self.get_conn() as conn:
             with conn.cursor() as cursor:
@@ -198,4 +203,5 @@ gen4_db = AsyncConnectionPool(sqlserver)
 def fetchone(PSQL, *args): return gen4_db.fetchone(PSQL, *args)
 def fetchall(PSQL, *args): return gen4_db.fetchall(PSQL, *args)
 def execute(PSQL, *args): return gen4_db.execute(PSQL, *args)
+def executemany(PSQL, *args): return gen4_db.executemany(PSQL, *args)
 def fetchall_df(PSQL, *args): return SQLcursor(sqlserver).fetchall_df(PSQL, *args)
