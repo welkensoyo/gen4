@@ -87,6 +87,8 @@ if __name__ == '__main__':
     if args.log == 'console':
         main()
     elif config.scheduler == True:
+        from API.log import velox_sync
+        velox_sync(status='idle')
         with open('velox.log', 'w') as f:
             with redirect_stdout(f):
                 main()
