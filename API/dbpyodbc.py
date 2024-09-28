@@ -26,9 +26,9 @@ _conn = None
 
 def fetchall(SQL, *args):
     try:
-        print(SQL)
+        # print(SQL)
         conn = pyodbc.connect(connection_string, autocommit=True)
-        print(connection_string)
+        # print(connection_string)
         c = conn.cursor()
         try:
             c.execute(SQL, args)

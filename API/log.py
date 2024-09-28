@@ -2,6 +2,9 @@ from gevent import spawn
 import API.dbpyodbc as dbpy
 import API.dbms as dbms
 import arrow
+from cachetools import TTLCache
+from cachetools import cached
+cache = TTLCache(maxsize=10, ttl=300)
 
 def api_log(route, method, payload, code, result):
     # print('api_log', route, method, payload, code, result)
@@ -19,6 +22,7 @@ def sync_log(table, pids, result):
         dbpy.execute(PSQL, table, pids, result)
     spawn(_, table, pids, result)
 
+@cached(cache)
 def velox_log(mode=None, error=''):
     try:
         if mode:
@@ -29,6 +33,7 @@ def velox_log(mode=None, error=''):
     except:
         return []
 
+@cached(cache)
 def velox_stats():
     SQL = 'SELECT * FROM cached.missed_last_sync ORDER BY 2,3,4'
     return [(x[0], x[1], x[2], arrow.get(x[3]).to('US/Central').format('YYYY-MM-DD HH:mm:ss'), arrow.get(x[4]).to('US/Central').format('YYYY-MM-DD HH:mm:ss')) for x in dbpy.fetchall(SQL)]
