@@ -1009,7 +1009,8 @@ if __name__ == '__main__':
     # scheduled('72', _async=False)
     # scheduled('12',_async=True)
     # v = API()print(v.check_table_sync('treatments'))
-    API().practices()
+    get_aging('2024-09-29')
+
 
 
 

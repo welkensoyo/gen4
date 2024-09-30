@@ -178,7 +178,7 @@ class AsyncConnectionPool:
     def execute(self, sql, *args):
         with self.get_conn() as conn:
             with conn.cursor() as cursor:
-                return self.pool.apply(cursor.execute, (sql,) + args)
+                return self.pool.apply(cursor.execute, (sql, args))
 
     def executemany(self, sql, *args):
         with self.get_conn() as conn:
