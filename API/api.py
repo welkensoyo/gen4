@@ -184,3 +184,7 @@ class API:
             if method and userid and action:
                 report_clicked(method, userid, action)
             return 'REPORT ACKNOWLEDGEMENT SUCCESSFUL'
+
+    def available_connections(self):
+        from API.dbms import available_connections, available_pool
+        return {'queue': str(available_connections()), 'pool': str(available_pool())}

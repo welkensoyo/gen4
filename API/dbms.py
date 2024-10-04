@@ -172,8 +172,11 @@ class AsyncConnectionPool:
         finally:
             self.queue.put(conn)
 
-    def active_connections(self):
+    def available_connections(self):
         return self.queue.qsize()
+
+    def available_pool(self):
+        return self.pool.size
 
     def execute(self, sql, *args):
         with self.get_conn() as conn:
@@ -205,3 +208,5 @@ def fetchall(PSQL, *args): return gen4_db.fetchall(PSQL, *args)
 def execute(PSQL, *args): return gen4_db.execute(PSQL, *args)
 def executemany(PSQL, *args): return gen4_db.executemany(PSQL, *args)
 def fetchall_df(PSQL, *args): return SQLcursor(sqlserver).fetchall_df(PSQL, *args)
+def available_connections(): return gen4_db.available_connections()
+def available_pool(): return gen4_db.available_pool()

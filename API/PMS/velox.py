@@ -486,7 +486,6 @@ class API:
             self.create_table()
             self.authorization()
         self.load_bcp_bulk(_async=True)
-        self.create_indexes()
 
     def bulk_bcp_reload(self, table, _async=True):
         self.table = table
@@ -555,7 +554,6 @@ class API:
             self.create_table()
             self.authorization()
         self.load_bcp_bulk(_async=False)
-        self.create_indexes()
 
     def delete_updated(self,ids):
         SQL = f'''DELETE FROM {self.prefix}{self.table} WHERE id in ({','.join(map(str, ids))}); '''
@@ -628,6 +626,7 @@ class API:
                         txt += f'{col} varchar(255),'
                 txt = txt + f''' last_updated DATETIME2);'''
                 db.execute(txt)
+                self.create_indexes()
         except:
             traceback.print_exc()
             pass
@@ -1003,7 +1002,7 @@ if __name__ == '__main__':
     # scheduled('72', _async=False)
     # scheduled('12',_async=True)
     # v = API()print(v.check_table_sync('treatments'))
-    get_aging('2024-08-30')
+    create_staging()
 
 
 
