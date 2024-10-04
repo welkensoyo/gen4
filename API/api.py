@@ -28,15 +28,6 @@ def _master(f):
 
 class API:
 
-    def _response(self, id, message, method):
-        if self.option == 'raw' or self.option2 == 'raw':
-            self.option2 = ''
-            return message
-        try:
-            return {'status':message.pop('status', True),'id':id,'message':message, 'method':method}
-        except (TypeError, AttributeError): #handle when message is list
-            return {'status': False if isinstance(message, (str)) else True, 'id': id, 'message': message, 'method': method}
-
     def __init__(self, payload, apikey, environ, mode):
         self.r = r.Report
         self.mode = mode
@@ -45,16 +36,35 @@ class API:
         self.pl = payload
         self.option = self.pl.pop('option', '').lower()
         self.option2 = self.pl.pop('option2', '').lower()
-         #make dynamic query into database at some point for future gateways.
-        try:
-            self.request_details = {k: v for k, v in dict(self.environ).items() if isinstance(v, (str, int, list, dict, tuple))}
-        except:
-            self.request_details = {'mode':'Internal'}
+        self.request_details = self._extract_request_details()
         self.pl['ip'] = self.request_details.get('REMOTE_ADDR') or '127.0.0.1'
-        if self.apikey not in ('8725c240-f1bc-41df-87c5-b9738b3cc75a','tracker'):
+        self._validate_apikey()
+
+    def _extract_request_details(self):
+        try:
+            return {k: v for k, v in dict(self.environ).items() if isinstance(v, (str, int, list, dict, tuple))}
+        except Exception:
+            return {'mode': 'Internal'}
+
+    def _validate_apikey(self):
+        if self.apikey not in ('8725c240-f1bc-41df-87c5-b9738b3cc75a', 'tracker'):
             abort(500, 'Oops please check API specs and try again...')
         if self.apikey == 'tracker' and self.option != 'clicked':
             abort(500, 'Oops please check API specs and try again...')
+
+    def _response(self, id, message, method):
+        if self.option == 'raw' or self.option2 == 'raw':
+            self.option2 = ''
+            return message
+        try:
+            return {'status': message.pop('status', True), 'id': id, 'message': message, 'method': method}
+        except (TypeError, AttributeError):  # handle when message is list
+            return {
+                'status': False if isinstance(message, str) else True,
+                'id': id,
+                'message': message,
+                'method': method
+            }
 
     # def login(self):
     #     if self.apikey:
@@ -134,8 +144,10 @@ class API:
             return velox.log()
         elif self.option =='pause':
             everyhour.pause = True
-        elif self.option =='resume':
-            everyhour.pause = False
+        elif self.option =='switch':
+            if velox.velox_sync() == 'idle':
+                return velox.velox_sync('running')
+            return velox.velox_sync('idle')
         elif self.option == 'fullrefresh':
             # spawn(velox.refresh, self.pl.get('pids'))
             return 'No Longer Supported...'

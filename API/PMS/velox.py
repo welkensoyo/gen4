@@ -57,7 +57,6 @@ upool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=CA, num_pools=10
 
 current = 'No Process Running...'
 last_time_sync = None
-current_sync = False
 
 class API:
     def __init__(self, qa=False, pids=None, staging=True):
@@ -322,7 +321,6 @@ class API:
 
     def stream(self, url, meta=None):
         global last_time_sync
-        global current_sync
         self.headers['Accept'] = 'application/x-ndjson'
         self.headers['Content-Type'] = 'application/json'
         if meta:
@@ -331,9 +329,9 @@ class API:
                 with upool.request('POST', url, body=meta, headers=self.headers, retries=3, preload_content=False) as each:
                     each.auto_close = False
                     next = each.headers.get('X-Next-Timestamp') or last_time_sync or "2001-01-01T00:00:00.000Z"
-                    if not current_sync:
+                    if not sync_in_progress() == 'idle':
                         self.last_sync(next)
-                        current_sync = True
+                        sync_in_progress('running')
                     yield each.data
             except:
                 # traceback.
@@ -653,12 +651,12 @@ class API:
             db.execute(f'''CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {self.prefix}{self.table} ( [clinic_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         CREATE NONCLUSTERED INDEX [ix_vx_{table}_patient_id] ON {self.prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         CREATE NONCLUSTERED INDEX [ix_vx_{table}_payment_class] ON {self.prefix}{self.table} ( [payment_class] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
-        CREATE NONCLUSTERED INDEX [ix_vx_{table}_practice_id] ON {self.prefix}{self.table} ( [practice_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [ix_vx_{table}_practice_id] ON {self.prefix}{self.table} ([practice_id] ASC,	[deleted] ASC) INCLUDE([payment_class],[amount],[treatment_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
         ''')
 
         elif 'treatments' in table:
             db.execute(f'''
-CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {self.prefix}{self.table} ([practice_id] ASC,	[deleted] ASC,	[tx_status] ASC,	[completion_date] ASC,	[cost] ASC) INCLUDE([provider_id],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+CREATE NONCLUSTERED INDEX [sidx_{table}_practice_provider_clinic] ON {self.prefix}{self.table} (practice_id,[tx_status] ASC,[deleted] ASC,[completion_date] ASC,clinic_id) INCLUDE([appointment_id],[code],[cost],[id],[patient_id],[provider_id],[procedure_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
 CREATE NONCLUSTERED INDEX [ix_{table}_plan_date] ON {self.prefix}{self.table} ([practice_id] ASC, [deleted] ASC, [plan_date] ASC, [cost] ASC ) INCLUDE([completion_date],[tx_status],[clinic_id]) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
 CREATE NONCLUSTERED INDEX [ix_{table}_patient_id] ON {self.prefix}{self.table} ( [patient_id] ASC ) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
 CREATE NONCLUSTERED INDEX [ix_{table}_clinic_id] ON {self.prefix}{self.table} ( [clinic_id] ASC) WITH (STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
@@ -768,12 +766,10 @@ def check_staging_migration():
     return db.fetchone(SQL)[0]
 
 def sync_in_progress(status=None):
-    if current_sync is True and status is None:
-        return True
     try:
         return velox_sync(status)
     except:
-        return False
+        return 'idle'
 
 def last_updated(table='ledger'):
     t = {'ledger':'transaction_date', 'practices':'last_sync'}
@@ -877,11 +873,10 @@ def refresh(pids=None):
 
 def scheduled(interval=None, staging=True, tables=None, _async=True):
     global current
-    global current_sync
     if check_staging_migration() == 'True':
         current = f'Migration still in progress....'
         return
-    if sync_in_progress():
+    if sync_in_progress() == 'running':
         return 'Sync in progress...'
     sync_in_progress(status='running')
     error = ''
@@ -910,7 +905,6 @@ def scheduled(interval=None, staging=True, tables=None, _async=True):
         current = f'No Sync In Progress... last sync took {time.perf_counter() - start:.2f} seconds...'
     except:
         error = traceback.format_exc()
-    current_sync = False
     sync_in_progress(status='idle')
     everyhour.pause = False
     log(mode='sync', error=error)
@@ -1009,7 +1003,7 @@ if __name__ == '__main__':
     # scheduled('72', _async=False)
     # scheduled('12',_async=True)
     # v = API()print(v.check_table_sync('treatments'))
-    get_aging('2024-09-29')
+    get_aging('2024-08-30')
 
 
 

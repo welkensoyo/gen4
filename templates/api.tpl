@@ -11,7 +11,7 @@
     <a class="btn btn-primary" id="syncb" onclick="sync()">Sync Velox</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         </div>
         <div class="col">
-    <a class="btn btn-primary float-middle" id="pauseb" onclick="unpause()">Un Pause</a>
+    <a class="btn btn-primary float-middle" id="pauseb" onclick="unpause()">SYNC {{current}}</a>
         </div>
         <div class="col">
 <!--    <a class="btn btn-primary float-end" id="resetb" onclick="reset()">Full Reset</a>-->
@@ -180,12 +180,12 @@ function unpause() {
     const response = confirm("Are you sure you want to do that?");
         if (response) {
                 document.getElementById('message').innerHTML = "<strong>Message: </strong>Resume scheduler..."
-                apiCall('/api/velox/resume?apikey={{apikey}}', {}).then((data) => {
+                apiCall('/api/velox/switch?apikey={{apikey}}', {}).then((data) => {
                     document.getElementById('message').innerHTML = "<strong>Response:</strong> "+data
                 });
         } else {
             // add code if the user pressed the Cancel button
-            console.log("Canceled");
+            console.log("STATUS {{current}}");
         }
 
 }
