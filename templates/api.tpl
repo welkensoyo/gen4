@@ -120,6 +120,7 @@ async function apiCall(url = "", data = {}) {
   });
   return response.json(); // parses JSON response into native JavaScript objects
 }
+
 function sync() {
     const response = confirm("Are you sure you want to do that?");
         if (response) {
