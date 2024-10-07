@@ -1,6 +1,4 @@
-import API.dbpg as db
-import API.ziptime as zt
-from bottle import template
+import API.timetools as zt
 
 states = ''.join(f'''<option value="{k}">{v},'''  for k,v in zt.states.items())
 

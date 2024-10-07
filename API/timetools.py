@@ -13,6 +13,10 @@ def checkday():
         return True
     return False
 
+def get_month_days(month, year):
+    start_date = arrow.get(f'{year}-{month}-01')
+    end_date = start_date.shift(months=1).shift(days=-1)
+    return [start_date.shift(days=i).format('YYYY-MM-DD') for i in range((end_date - start_date).days + 1)]
 
 def timezones(search=None):
     if not search:

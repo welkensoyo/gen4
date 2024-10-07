@@ -13,6 +13,7 @@ import requests
 import time
 import shutil
 from API.log import api_log as _log, velox_log as log, velox_stats as stats, velox_sync, sync_log
+from API.timetools import get_month_days
 
 sync_tables = ('procedure_codes', 'treatments', 'ledger', 'appointments', 'patients', 'treatment_plan', 'providers', 'fee_schedule', 'fee_schedule_procedure')
 
@@ -643,7 +644,7 @@ class API:
     def create_indexes(self):
         now = arrow.now().format('YYYY_MM_DD')
         table = self.table+'_'+now
-        db.execute(f'''CREATE UNIQUE CLUSTERED INDEX ux_{table}_pid ON {self.prefix}{self.table}  (practice_id, id) with ignore_dup_key; ''')
+        db.execute(f'''CREATE UNIQUE CLUSTERED INDEX ux_{table}_pid ON {self.prefix}{self.table}  (id) with ignore_dup_key; ''')
         if 'appointments' in table:
             db.execute(f'''CREATE INDEX ix_{table}_clinic_id ON {self.prefix}{self.table}  (clinic_id, practice_id); ''')
         elif 'ledger' in table:
@@ -981,11 +982,6 @@ def schedule_pid(interval, table, pid):
     v.load_sync_files(table, start=ltime)
     return
 
-def get_month_days(month, year):
-    start_date = arrow.get(f'{year}-{month}-01')
-    end_date = start_date.shift(months=1).shift(days=-1)
-    return [start_date.shift(days=i).format('YYYY-MM-DD') for i in range((end_date - start_date).days + 1)]
-
 if __name__ == '__main__':
     os.chdir('../../')
     from pprint import pprint
@@ -1002,8 +998,4 @@ if __name__ == '__main__':
     # scheduled('72', _async=False)
     # scheduled('12',_async=True)
     # v = API()print(v.check_table_sync('treatments'))
-    create_staging()
-
-
-
 
