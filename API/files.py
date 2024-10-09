@@ -4,10 +4,33 @@ import openpyxl, xlrd
 from lxml import html
 import os
 from io import BytesIO, StringIO
+from tabula import read_pdf, convert_into
+from tabula.errors import CSVParseError
 import bottle
 import logging
 
 logger = logging.getLogger('sdb_app')
+
+class PDF(object):
+    def __init__(self, file=None, filename=''):
+        self.file = file
+        self.filename = filename
+        if self.file:
+            self.filename = file.filename.lower()
+            if os.path.exists(self.filename):
+                os.remove(self.filename)
+            file.save(self.filename)
+            self.result = None
+
+    def read(self, output_format='json', multiple_tables=True, pages='all'):
+        try:
+            return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=multiple_tables, silent=True)
+        except CSVParseError as e:
+            # Attempt to set `names` to manage different column counts.
+            column_names = [f'column_{i}' for i in range(20)]  # Assume a maximum of 20 columns
+            return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=multiple_tables, silent=True, pandas_options={'names': column_names})
+
+
 class Excel():
     def __init__(self, ext=None):
         self.file = None
@@ -38,6 +61,8 @@ class Excel():
             self._xls(binary=binary)
         if self.ext == '.xlsx':
             self._xlsx(binary=binary, data_only=data_only)
+        if self.ext == '.pdf':
+            self.wb = PDF(filename=filename).read()
         return self
 
     def _xlsx(self, binary=False, data_only=False):
