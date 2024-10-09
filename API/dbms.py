@@ -6,7 +6,6 @@ from API.config import sqlserver
 import pandas as pd
 import os
 from gevent.queue import Queue
-from gevent.pool import Pool
 from contextlib import contextmanager
 import logging
 
@@ -156,8 +155,8 @@ class AsyncConnectionPool:
         """
         Initialize the AsyncConnectionPool using gevent.
         """
-        self.pool = gevent.pool.Pool(pool_size)
-        self.queue = gevent.queue.Queue()
+        self.pool_size = pool_size
+        self.queue = Queue(pool_size)
 
         # Populate the queue with connections.
         for _ in range(pool_size):
@@ -166,6 +165,9 @@ class AsyncConnectionPool:
 
     @contextmanager
     def get_conn(self):
+        """
+        Context manager to get a connection from the pool.
+        """
         conn = self.queue.get()
         try:
             yield conn
@@ -173,31 +175,43 @@ class AsyncConnectionPool:
             self.queue.put(conn)
 
     def available_connections(self):
+        """
+        Return the number of available connections.
+        """
         return self.queue.qsize()
 
-    def available_pool(self):
-        return self.pool.size
-
     def execute(self, sql, *args):
+        """
+        Execute a SQL command.
+        """
         with self.get_conn() as conn:
             with conn.cursor() as cursor:
-                return self.pool.apply(cursor.execute, (sql, args))
+                return cursor.execute(sql, *args)
 
-    def executemany(self, sql, *args):
+    def executemany(self, sql, args_list):
+        """
+        Execute a SQL command against all parameter sequences.
+        """
         with self.get_conn() as conn:
             with conn.cursor() as cursor:
-                return self.pool.apply(cursor.executemany, (sql,) + args)
+                return cursor.executemany(sql, args_list)
 
     def fetchall(self, sql, *args):
+        """
+        Fetch all rows from a query.
+        """
         with self.get_conn() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(sql, args)
+                cursor.execute(sql, *args)
                 return cursor.fetchall()
 
     def fetchone(self, sql, *args):
+        """
+        Fetch a single row from a query.
+        """
         with self.get_conn() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(sql, args)
+                cursor.execute(sql, *args)
                 return cursor.fetchone()
 
 
@@ -209,4 +223,3 @@ def execute(PSQL, *args): return gen4_db.execute(PSQL, *args)
 def executemany(PSQL, *args): return gen4_db.executemany(PSQL, *args)
 def fetchall_df(PSQL, *args): return SQLcursor(sqlserver).fetchall_df(PSQL, *args)
 def available_connections(): return gen4_db.available_connections()
-def available_pool(): return gen4_db.available_pool()

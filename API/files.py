@@ -1,41 +1,14 @@
+import API.njson as j
 import csv
 import openpyxl, xlrd
 from lxml import html
+import os
 from io import BytesIO, StringIO
 import bottle
-import xlrd, traceback, uuid, os, hashlib
-from tabula import read_pdf, convert_into
-from tabula.errors import CSVParseError
-from PIL import Image
+import logging
 
-
-def md5(text):
-    x = hashlib.md5()
-    x.update(text)
-    return x.hexdigest()
-
-class PDFProcess(object):
-    def __init__(self, file=None, filename=''):
-        self.file = file
-        self.filename = filename
-        if self.file:
-            self.filename = file.filename.lower()
-            if os.path.exists(self.filename):
-                os.remove(self.filename)
-            file.save(self.filename)
-            self.result = None
-
-    def read(self, output_format='json', multiple_tables=True, pages='all'):
-        try:
-            return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=multiple_tables, silent=True)
-        except CSVParseError as e:
-            # Attempt to set `names` to manage different column counts.
-            column_names = [f'column_{i}' for i in range(20)]  # Assume a maximum of 20 columns
-            return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=multiple_tables, silent=True, pandas_options={'names': column_names})
-        return read_pdf(self.filename, output_format=output_format, pages=pages, multiple_tables=True, silent=True)
-
-
-class Excel:
+logger = logging.getLogger('sdb_app')
+class Excel():
     def __init__(self, ext=None):
         self.file = None
         self.filename = None
@@ -220,3 +193,21 @@ class Excel:
             if h:
                 x[h.lower().strip()] = i
         return x
+
+
+def measures(x, filename):
+    x = j.loads(x)
+    measures = []
+    for i in x['model']['tables']:
+        if i.get('name') == 'Calcs':
+            measures = i['measures']
+    rows = []
+    cols = ["name", "expression", "formatString", "lineageTag", "annotations"]
+    rows.append(cols)
+    rows.extend([[m.get(k) for k in cols] for m in measures ])
+    with open(f'{filename}.csv', 'w',newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
+
+def get_filename(path):
+    return os.path.basename(path)

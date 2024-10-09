@@ -21,7 +21,6 @@ full_tables = ('treatments', 'ledger',  'appointments', 'patients', 'providers',
               'patient_recall', 'operatory', 'procedure_codes', 'image_metadata', 'clinic', 'referral_sources', 'payment_type',
               'patient_referrals', 'clinical_notes', 'perio_chart', 'perio_tooth', 'treatment_plan', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure')
 
-
 nightly_tables = ('clinic', 'providers', 'insurance_carriers', 'insurance_claim', 'patient_recall', 'operatory', 'procedure_codes','perio_tooth','perio_chart',
                   'referral_sources', 'payment_type','patient_referrals', 'clinical_notes', 'insurance_groups', 'fee_schedule', 'fee_schedule_procedure', 'image_metadata',)
 
@@ -947,8 +946,8 @@ def reload_file(table):
     # v.create_indexes()
 
 def resync_main(pid):
-    for t in ('providers','treatments', 'ledger', 'appointments', 'patients'):
-        resync_table(t, str(pid), verbose=False, _async=True)
+    for t in sync_tables:
+        resync_table(t, str(pid), verbose=False, _async=False)
 
 def fix_clinic_ids():
     for table in ('treatments', 'ledger', 'appointments', 'patients'):
@@ -987,6 +986,7 @@ if __name__ == '__main__':
     from pprint import pprint
     import json
     import ujson
+    resync_main('2913')
     # get_aging('2024-09-19')
     # for pid in API().get_specific_pids().pids:
     #     resync_main(pid)

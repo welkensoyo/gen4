@@ -201,7 +201,6 @@ class Paylocity:
 if __name__=="__main__":
     p = Paylocity()
     # p.employees(refresh=True)
-    p.delete_terminated_users(shift=30)
     # print(cache.retrieve('aztopay'))
 
 

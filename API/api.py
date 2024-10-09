@@ -1,7 +1,6 @@
 from gevent import spawn
 import API.reports as r
 from bottle import abort
-from API.njson import dc, lc, checkuuid, b64e, jc, loads
 import arrow
 import API.cache as cache
 from API.clinic import API as Practice
@@ -186,5 +185,5 @@ class API:
             return 'REPORT ACKNOWLEDGEMENT SUCCESSFUL'
 
     def available_connections(self):
-        from API.dbms import available_connections, available_pool
-        return {'queue': str(available_connections()), 'pool': str(available_pool())}
+        from API.dbms import available_connections
+        return {'queue': str(available_connections())}
