@@ -133,6 +133,8 @@ class Excel():
                     longest = x
                     index = i
             return ws[index]
+        if self.ext == '.pdf':
+            return self.wb
         if self.ext == '.csv':
             if self.wb:
                 return self.csv_read_wb(header=header, delimiter=self.delimiter)
